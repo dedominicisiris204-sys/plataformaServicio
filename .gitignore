@@ -31,3 +31,12 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Archivos locales y secretos: no subir al repositorio
+.env
+.env.*
+!.env.example
+# Configuracion local y credenciales: no publicar
+application.properties
+application-local.properties
+node_modules/
