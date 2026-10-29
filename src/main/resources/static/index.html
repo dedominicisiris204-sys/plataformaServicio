@@ -35,6 +35,11 @@
         .jobs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; width: 100%; }
         .job-card { background: white; border-left: 5px solid #2563eb; padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); position: relative; }
         .job-badge { background: #dbeafe; color: #1e40af; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.8rem; font-weight: bold; position: absolute; top: 1.5rem; right: 1.5rem; }
+        .services-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+        .service-card { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.25rem; }
+        .service-card h4 { margin: 0 0 .5rem; color: #1e3a8a; }
+        .map-actions { display: flex; gap: .75rem; flex-wrap: wrap; align-items: center; }
+        .status-message { min-height: 1.25rem; color: #475569; font-size: .9rem; }
 
         /* === ESTILOS DEL CHAT INTERACTIVO === */
         .chat-box { height: 350px; border: 1px solid #e2e8f0; border-radius: 8px; background: #efeae2; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
@@ -106,6 +111,34 @@
                 </div>
             </div>
         </div>
+        <section class="card" style="width:100%;">
+            <h3>Perfil profesional y ubicación</h3>
+            <p>Ingresá el ID del usuario para consultar o actualizar su perfil profesional.</p>
+            <form id="formPerfil">
+                <div class="form-group"><label class="form-label" for="perfilUsuarioId">ID de usuario</label><input type="number" min="1" id="perfilUsuarioId" class="form-control" required></div>
+                <div class="form-group"><label class="form-label" for="perfilExperiencia">Experiencia</label><textarea id="perfilExperiencia" maxlength="500" rows="3" class="form-control"></textarea></div>
+                <div class="form-group"><label class="form-label" for="perfilEstudios">Estudios</label><input id="perfilEstudios" maxlength="255" class="form-control"></div>
+                <div class="form-group"><label class="form-label" for="perfilHabilidades">Servicios y habilidades</label><input id="perfilHabilidades" maxlength="255" class="form-control" placeholder="Ej.: electricidad, diseño, reparación"></div>
+                <div class="form-group"><label class="form-label" for="perfilZona">Zona de trabajo</label><input id="perfilZona" maxlength="100" class="form-control" placeholder="Ciudad o barrio"></div>
+                <div class="form-group"><label class="form-label" for="perfilHorarios">Horarios</label><input id="perfilHorarios" maxlength="100" class="form-control"></div>
+                <div class="form-group"><label class="form-label" for="perfilLatitud">Latitud</label><input type="number" step="any" min="-90" max="90" id="perfilLatitud" class="form-control"></div>
+                <div class="form-group"><label class="form-label" for="perfilLongitud">Longitud</label><input type="number" step="any" min="-180" max="180" id="perfilLongitud" class="form-control"></div>
+                <div class="map-actions">
+                    <button type="button" id="btnCargarPerfil" class="btn btn-warning">Cargar perfil</button>
+                    <button type="button" id="btnUbicacion" class="btn btn-warning">Usar mi ubicación</button>
+                    <button type="submit" class="btn btn-primary" style="width:auto;">Guardar perfil</button>
+                    <button type="button" id="btnVerMapa" class="btn btn-warning" disabled>Ver mapa en OpenStreetMap</button>
+                </div>
+                <p class="status-message" id="estadoPerfil" role="status" aria-live="polite"></p>
+                <p class="status-message">La ubicación solo se solicita al pulsar “Usar mi ubicación”. Al abrir el mapa, las coordenadas se envían a OpenStreetMap.</p>
+            </form>
+        </section>
+        <section class="card" style="width:100%;">
+            <h3>Servicios profesionales</h3>
+            <p>Perfiles que publicaron sus habilidades y servicios.</p>
+            <div id="listaServicios" class="services-grid" aria-live="polite"></div>
+            <p class="status-message" id="estadoServicios" role="status" aria-live="polite"></p>
+        </section>
     </div>
 </div>
 
@@ -137,6 +170,7 @@
 <script>
     const API_URL = "http://localhost:8080/api/usuarios";
     const API_MSGS = "http://localhost:8080/api/mensajes";
+    const API_PERFILES = "http://localhost:8080/api/perfiles";
 
     let usuarioActual = "Iris";
     let empresaActual = "Global Software Inc.";
@@ -235,7 +269,149 @@
         document.getElementById("formEmpleo").reset();
     });
 
+    function mostrarEstadoPerfil(mensaje, error = false) {
+        const estado = document.getElementById("estadoPerfil");
+        estado.textContent = mensaje;
+        estado.style.color = error ? "#b91c1c" : "#475569";
+    }
+
+    function actualizarEnlaceMapa() {
+        const lat = Number(document.getElementById("perfilLatitud").value);
+        const lon = Number(document.getElementById("perfilLongitud").value);
+        const btn = document.getElementById("btnVerMapa");
+        const coordenadasValidas = Number.isFinite(lat) && Number.isFinite(lon)
+            && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
+        btn.disabled = !coordenadasValidas;
+        if (coordenadasValidas) {
+            btn.dataset.url = `https://www.openstreetmap.org/?mlat=${encodeURIComponent(lat)}&mlon=${encodeURIComponent(lon)}#map=14/${encodeURIComponent(lat)}/${encodeURIComponent(lon)}`;
+        } else {
+            delete btn.dataset.url;
+        }
+    }
+
+    function cargarDatosPerfil(perfil) {
+        document.getElementById("perfilExperiencia").value = perfil.experiencia || "";
+        document.getElementById("perfilEstudios").value = perfil.estudios || "";
+        document.getElementById("perfilHabilidades").value = perfil.habilidades || "";
+        document.getElementById("perfilZona").value = perfil.zonaTrabajo || "";
+        document.getElementById("perfilHorarios").value = perfil.horarios || "";
+        document.getElementById("perfilLatitud").value = perfil.latitud ?? "";
+        document.getElementById("perfilLongitud").value = perfil.longitud ?? "";
+        actualizarEnlaceMapa();
+    }
+
+    document.getElementById("btnCargarPerfil").addEventListener("click", async () => {
+        const usuarioId = document.getElementById("perfilUsuarioId").value;
+        if (!usuarioId) return mostrarEstadoPerfil("Ingresá un ID de usuario.", true);
+        try {
+            const respuesta = await fetch(`${API_PERFILES}/usuario/${encodeURIComponent(usuarioId)}`);
+            if (respuesta.status === 404) {
+                cargarDatosPerfil({});
+                return mostrarEstadoPerfil("Este usuario todavía no tiene perfil. Completá los campos y guardalo.");
+            }
+            if (!respuesta.ok) throw new Error("No se pudo cargar el perfil.");
+            cargarDatosPerfil(await respuesta.json());
+            mostrarEstadoPerfil("Perfil cargado.");
+        } catch (error) {
+            mostrarEstadoPerfil(error.message || "No se pudo conectar con el servidor.", true);
+        }
+    });
+
+    document.getElementById("formPerfil").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const usuarioId = document.getElementById("perfilUsuarioId").value;
+        const latitud = document.getElementById("perfilLatitud").value;
+        const longitud = document.getElementById("perfilLongitud").value;
+        const payload = {
+            experiencia: document.getElementById("perfilExperiencia").value,
+            estudios: document.getElementById("perfilEstudios").value,
+            habilidades: document.getElementById("perfilHabilidades").value,
+            zonaTrabajo: document.getElementById("perfilZona").value,
+            horarios: document.getElementById("perfilHorarios").value,
+            latitud: latitud === "" ? null : Number(latitud),
+            longitud: longitud === "" ? null : Number(longitud)
+        };
+        try {
+            const respuesta = await fetch(`${API_PERFILES}/usuario/${encodeURIComponent(usuarioId)}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            if (respuesta.status === 404) throw new Error("No existe un usuario con ese ID.");
+            if (respuesta.status === 400) throw new Error("Revisá los campos y las coordenadas: latitud y longitud deben informarse juntas.");
+            if (!respuesta.ok) throw new Error("No se pudo guardar el perfil.");
+            cargarDatosPerfil(await respuesta.json());
+            mostrarEstadoPerfil("Perfil guardado.");
+            cargarServicios();
+        } catch (error) {
+            mostrarEstadoPerfil(error.message || "No se pudo conectar con el servidor.", true);
+        }
+    });
+
+    document.getElementById("btnUbicacion").addEventListener("click", () => {
+        if (!navigator.geolocation) return mostrarEstadoPerfil("Este navegador no permite obtener la ubicación.", true);
+        mostrarEstadoPerfil("Esperando permiso de ubicación…");
+        navigator.geolocation.getCurrentPosition((posicion) => {
+            document.getElementById("perfilLatitud").value = posicion.coords.latitude.toFixed(6);
+            document.getElementById("perfilLongitud").value = posicion.coords.longitude.toFixed(6);
+            actualizarEnlaceMapa();
+            mostrarEstadoPerfil("Ubicación cargada. Guardá el perfil para conservarla.");
+        }, () => mostrarEstadoPerfil("No se pudo obtener la ubicación. Podés cargar las coordenadas manualmente.", true), {
+            enableHighAccuracy: false,
+            timeout: 10000,
+            maximumAge: 60000
+        });
+    });
+
+    document.getElementById("perfilLatitud").addEventListener("input", actualizarEnlaceMapa);
+    document.getElementById("perfilLongitud").addEventListener("input", actualizarEnlaceMapa);
+    document.getElementById("btnVerMapa").addEventListener("click", (event) => {
+        const url = event.currentTarget.dataset.url;
+        if (url) window.open(url, "_blank", "noopener,noreferrer");
+    });
+
+    async function cargarServicios() {
+        const lista = document.getElementById("listaServicios");
+        const estado = document.getElementById("estadoServicios");
+        lista.replaceChildren();
+        try {
+            const respuesta = await fetch(`${API_PERFILES}/servicios`);
+            if (!respuesta.ok) throw new Error("No se pudo cargar el catálogo.");
+            const servicios = await respuesta.json();
+            if (servicios.length === 0) {
+                estado.textContent = "Todavía no hay servicios publicados. Completá las habilidades de un perfil para aparecer en este catálogo.";
+                return;
+            }
+            estado.textContent = `${servicios.length} perfil(es) profesional(es).`;
+            servicios.forEach((servicio) => {
+                const tarjeta = document.createElement("article");
+                tarjeta.className = "service-card";
+                const nombre = document.createElement("h4");
+                nombre.textContent = servicio.nombre || "Profesional";
+                const habilidades = document.createElement("p");
+                habilidades.textContent = servicio.habilidades;
+                const zona = document.createElement("p");
+                zona.textContent = servicio.zonaTrabajo ? `Zona: ${servicio.zonaTrabajo}` : "Zona no informada";
+                const horarios = document.createElement("p");
+                horarios.textContent = servicio.horarios ? `Horarios: ${servicio.horarios}` : "Horarios a coordinar";
+                tarjeta.append(nombre, habilidades, zona, horarios);
+                if (servicio.latitud != null && servicio.longitud != null) {
+                    const mapa = document.createElement("a");
+                    mapa.href = `https://www.openstreetmap.org/?mlat=${encodeURIComponent(servicio.latitud)}&mlon=${encodeURIComponent(servicio.longitud)}#map=14/${encodeURIComponent(servicio.latitud)}/${encodeURIComponent(servicio.longitud)}`;
+                    mapa.target = "_blank";
+                    mapa.rel = "noopener noreferrer";
+                    mapa.textContent = "Ver zona en OpenStreetMap";
+                    tarjeta.append(mapa);
+                }
+                lista.append(tarjeta);
+            });
+        } catch (error) {
+            estado.textContent = error.message || "No se pudo conectar con el servidor.";
+        }
+    }
+
     cargarUsuarios();
+    cargarServicios();
     // Auto-refresco de chat simulado cada 3 segundos
     setInterval(() => {
         if(document.getElementById("chat-tab").classList.contains("active")) { actualizarChat(); }

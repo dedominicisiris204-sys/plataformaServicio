@@ -36,6 +36,12 @@ public class Perfil implements Serializable {
     @Column(length = 100)
     private String horarios;
 
+    @Column(name = "latitud")
+    private Double latitud;
+
+    @Column(name = "longitud")
+    private Double longitud;
+
     @Column(name = "calificación_promedio")
     private Double calificacionPromedio = 0.0;
 
