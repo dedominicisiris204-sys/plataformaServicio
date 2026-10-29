@@ -2,21 +2,25 @@ package com.plataforma.plataforma_servicios.controlador;
 
 import com.plataforma.plataforma_servicios.entidad.Usuario;
 import com.plataforma.plataforma_servicios.servicio.UsuarioServicio;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.plataforma.plataforma_servicios.servicio.UsuarioServicio.EmailDuplicadoException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/usuarios")
 @CrossOrigin(origins = "*")
 public class UsuarioControlador {
 
-    @Autowired
-    private UsuarioServicio usuarioServicio;
+    private final UsuarioServicio usuarioServicio;
+
+    public UsuarioControlador(UsuarioServicio usuarioServicio) {
+        this.usuarioServicio = usuarioServicio;
+    }
 
     @GetMapping
     public ResponseEntity<List<Usuario>> obtenerTodos() {
@@ -24,131 +28,66 @@ public class UsuarioControlador {
     }
 
     @PostMapping
-    public ResponseEntity<?> guardar(@RequestBody Usuario usuario) {
-
+    public ResponseEntity<String> guardar(@RequestBody Usuario usuario) {
         try {
             Usuario nuevoUsuario = usuarioServicio.registrarUsuario(usuario);
-
-            return ResponseEntity
-                    .status(HttpStatus.CREATED)
+            return ResponseEntity.status(HttpStatus.CREATED)
                     .body("USUARIO REGISTRADO CORRECTAMENTE. ID=" + nuevoUsuario.getId());
-
+        } catch (EmailDuplicadoException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
-
-            e.printStackTrace();
-
-            Throwable causa = e;
-
-            while (causa.getCause() != null) {
-                causa = causa.getCause();
-            }
-
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(
-                            "ERROR REAL AL REGISTRAR USUARIO | "
-                            + e.getClass().getName()
-                            + " | "
-                            + e.getMessage()
-                            + " | CAUSA: "
-                            + causa.getClass().getName()
-                            + ": "
-                            + causa.getMessage()
-                    );
+            // No exponer detalles internos de la base de datos al cliente.
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("No se pudo registrar la cuenta. Revisá los datos e intentá nuevamente.");
         }
     }
+
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Usuario datos) {
-
-        List<Usuario> usuarios = usuarioServicio.listarTodos();
-
-        Usuario usuarioEncontrado = usuarios.stream()
-                .filter(u -> u.getEmail() != null
-                        && u.getEmail().equalsIgnoreCase(datos.getEmail()))
-                .filter(u -> u.getPassword() != null
-                        && u.getPassword().equals(datos.getPassword()))
-                .findFirst()
-                .orElse(null);
-
-        if (usuarioEncontrado == null) {
-            return ResponseEntity
-                    .status(HttpStatus.UNAUTHORIZED)
-                    .body("Email o contrasena incorrectos");
+    public ResponseEntity<?> login(@RequestBody Map<String, String> datos) {
+        if (datos == null) {
+            return ResponseEntity.badRequest().body("Ingresá el correo y la contraseña.");
         }
-
-        return ResponseEntity.ok(usuarioEncontrado);
+        String email = datos.get("email");
+        String password = datos.get("password");
+        return usuarioServicio.autenticar(email, password)
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body("Email o contraseña incorrectos."));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Usuario> actualizar(
-            @PathVariable Long id,
-            @RequestBody Usuario usuarioDetalles) {
-
-        Usuario usuarioExistente = usuarioServicio.listarTodos()
-                .stream()
-                .filter(u -> u.getId().equals(id))
-                .findFirst()
-                .orElse(null);
-
-        if (usuarioExistente == null) {
+    public ResponseEntity<?> actualizar(@PathVariable Long id, @RequestBody Usuario detalles) {
+        Usuario existente = usuarioServicio.buscarPorId(id);
+        if (existente == null) {
             return ResponseEntity.notFound().build();
         }
-
-        usuarioExistente.setNombre(usuarioDetalles.getNombre());
-        usuarioExistente.setEmail(usuarioDetalles.getEmail());
-
-        if (usuarioDetalles.getPassword() != null
-                && !usuarioDetalles.getPassword().isBlank()) {
-            usuarioExistente.setPassword(usuarioDetalles.getPassword());
+        try {
+            if (detalles.getNombre() != null) existente.setNombre(detalles.getNombre());
+            if (detalles.getEmail() != null) existente.setEmail(detalles.getEmail());
+            if (detalles.getPassword() != null && !detalles.getPassword().isBlank()) {
+                existente.setPassword(detalles.getPassword());
+            }
+            return ResponseEntity.ok(usuarioServicio.registrarUsuario(existente));
+        } catch (EmailDuplicadoException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
-
-        Usuario usuarioActualizado =
-                usuarioServicio.registrarUsuario(usuarioExistente);
-
-        return ResponseEntity.ok(usuarioActualizado);
     }
-
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<String> errorBody(HttpMessageNotReadableException e) {
-
-        Throwable causa = e;
-
-        while (causa.getCause() != null) {
-            causa = causa.getCause();
-        }
-
-        String mensaje = causa.getMessage();
-
-        if (mensaje == null || mensaje.isBlank()) {
-            mensaje = e.getMessage();
-        }
-
-        e.printStackTrace();
-
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(
-                        "ERROR AL LEER JSON | "
-                        + e.getClass().getName()
-                        + " | "
-                        + mensaje
-                );
+        return ResponseEntity.badRequest().body("El cuerpo de la solicitud no contiene un JSON válido.");
     }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<String> eliminar(@PathVariable Long id) {
-
-        try {
-            usuarioServicio.eliminarPorId(id);
-            return ResponseEntity.ok("Usuario eliminado correctamente");
-
-        } catch (Exception e) {
-
-            e.printStackTrace();
-
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error al eliminar usuario: " + e.getMessage());
+        if (usuarioServicio.buscarPorId(id) == null) {
+            return ResponseEntity.notFound().build();
         }
+        usuarioServicio.eliminarPorId(id);
+        return ResponseEntity.ok("Usuario eliminado correctamente");
     }
 }

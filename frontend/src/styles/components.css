@@ -1,4 +1,4 @@
-﻿@media (max-width: 950px) {
+@media (max-width: 950px) {
   .nav-links {
     display: none;
   }
@@ -873,4 +873,75 @@
     text-align: center;
     box-sizing: border-box;
   }
+}
+
+/* ============================================================
+   REDISEÑO PROFESIONAL DE PORTADA: TRABAJO + SERVICIOS
+   ============================================================ */
+.home-intent-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  width: 100%;
+  max-width: 650px;
+  margin: 22px 0 18px;
+}
+.intent-card {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+  padding: 17px 16px;
+  border: 1px solid #dce6e2;
+  border-radius: 16px;
+  background: rgba(255,255,255,.94);
+  color: #173d35;
+  text-align: left;
+  box-shadow: 0 8px 24px rgba(18, 55, 45, .06);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.intent-card:hover {
+  transform: translateY(-2px);
+  border-color: #8eb5a7;
+  box-shadow: 0 14px 30px rgba(18, 55, 45, .11);
+}
+.intent-card-primary {
+  background: #173d35;
+  border-color: #173d35;
+  color: #fff;
+}
+.intent-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(31, 105, 83, .10);
+  font-size: 25px;
+  font-weight: 700;
+}
+.intent-card-primary .intent-icon { background: rgba(255,255,255,.13); }
+.intent-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 4px; }
+.intent-copy strong { font-size: 14px; line-height: 1.25; }
+.intent-copy small { font-size: 11px; line-height: 1.4; opacity: .78; }
+.intent-arrow { font-size: 20px; opacity: .8; }
+.publication-type {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: #e8f2ee;
+  color: #205b49;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .045em;
+  line-height: 1.3;
+}
+@media (max-width: 700px) {
+  .home-intent-actions { grid-template-columns: 1fr; gap: 10px; margin: 18px auto; }
+  .intent-card { padding: 14px; }
+  .intent-copy strong { font-size: 13px; }
 }
