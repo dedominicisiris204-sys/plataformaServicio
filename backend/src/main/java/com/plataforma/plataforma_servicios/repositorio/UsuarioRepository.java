@@ -4,8 +4,11 @@ import com.plataforma.plataforma_servicios.entidad.Usuario;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
-    // Al extender JpaRepository, automÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ticamente heredas mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©todos como:
-    // save(), findAll(), findById(), deleteById() sin escribir una sola lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­nea de SQL.
+    Optional<Usuario> findByEmailIgnoreCase(String email);
+    boolean existsByEmailIgnoreCase(String email);
+    boolean existsByEmailIgnoreCaseAndIdNot(String email, Long id);
 }
