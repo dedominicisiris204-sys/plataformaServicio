@@ -1,3 +1,4 @@
+import { marcarInteres, obtenerComentarios, crearComentario } from "./conexionPersonas";
 import {
   BrowserRouter,
   Routes,
@@ -8,6 +9,7 @@ import {
 
 import { useEffect, useMemo, useState } from "react";
 import Perfil from "./pages/Perfil";
+import Mensajes from "./pages/Mensajes";
 
 import "./styles/global.css";
 import "./styles/variables.css";
@@ -41,6 +43,7 @@ function App() {
         <Route path="/registro" element={<Registro />} />
 
         <Route path="/perfil" element={<Perfil />} />
+        <Route path="/mensajes" element={<Mensajes />} />
 
         <Route path="*" element={<Inicio />} />
 
@@ -92,6 +95,7 @@ function Login() {
 
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
+
 
   async function iniciarSesion(e) {
 
@@ -296,6 +300,7 @@ function Registro() {
 
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
+
   const [exito, setExito] = useState("");
 
   async function registrar(e) {
@@ -344,29 +349,14 @@ function Registro() {
 
       if (!response.ok) { const detalle = await response.text(); console.error("RESPUESTA BACKEND REGISTRO:", detalle); throw new Error(detalle || `Error HTTP ${response.status}`); }
 
-      const textoLogin = await response.text();
+      const detalleRegistro = await response.text();
+      console.info("Respuesta del registro:", detalleRegistro);
 
-      let usuario;
-
-      try {
-        usuario = JSON.parse(textoLogin);
-      } catch {
-        throw new Error("El servidor devolvió una respuesta de inicio de sesión no válida.");
-      }
-
-      localStorage.setItem("usuario", JSON.stringify(usuario));
-
-      setExito(
-        "¡Cuenta creada correctamente!"
-      );
+      setExito("Cuenta creada correctamente. Ahora inicia sesion.");
 
       setTimeout(() => {
-
-        navigate("/");
-
-        window.location.reload();
-
-      }, 700);
+        navigate("/login");
+      }, 900);
 
     } catch (error) {
 
@@ -528,6 +518,88 @@ function Inicio() {
   const [cargando, setCargando] = useState(true);
 
   const [error, setError] = useState("");
+    const [cantidadesInteres, setCantidadesInteres] = useState({});
+    const [comentariosPorPublicacion, setComentariosPorPublicacion] = useState({});
+    const [comentariosAbiertos, setComentariosAbiertos] = useState({});
+    const [comentarioNuevo, setComentarioNuevo] = useState({});
+    const [procesandoInteres, setProcesandoInteres] = useState({});
+    const [procesandoComentario, setProcesandoComentario] = useState({});
+
+
+    const manejarMeGusta = async (publicacion) => {
+      if (!usuario) {
+        navigate("/login");
+        return;
+      }
+      if (!identidadUsuario) {
+        alert("No se pudo identificar al usuario. Volvé a iniciar sesión.");
+        return;
+      }
+      const id = publicacion.id;
+      if (procesandoInteres[id]) return;
+      setProcesandoInteres(prev => ({ ...prev, [id]: true }));
+      try {
+        await marcarInteres(id, identidadUsuario);
+        setCantidadesInteres(prev => ({
+          ...prev,
+          [id]: (prev[id] ?? Number(publicacion.interesados || 0)) + 1
+        }));
+      } catch (e) {
+        const mensaje = String(e?.message || "");
+        if (/ya marc|duplicad|409/i.test(mensaje)) {
+          alert("Ya marcaste que te interesa esta publicación.");
+        } else {
+          alert("No se pudo registrar el interés: " + mensaje);
+        }
+      } finally {
+        setProcesandoInteres(prev => ({ ...prev, [id]: false }));
+      }
+    };
+
+    const alternarComentarios = async (publicacion) => {
+      const id = publicacion.id;
+      const abrir = !comentariosAbiertos[id];
+      setComentariosAbiertos(prev => ({ ...prev, [id]: abrir }));
+      if (abrir && !Array.isArray(comentariosPorPublicacion[id])) {
+        try {
+          const resultado = await obtenerComentarios(id);
+          setComentariosPorPublicacion(prev => ({
+            ...prev,
+            [id]: Array.isArray(resultado) ? resultado : []
+          }));
+        } catch (e) {
+          alert("No se pudieron cargar los comentarios: " + (e?.message || ""));
+          setComentariosPorPublicacion(prev => ({ ...prev, [id]: [] }));
+        }
+      }
+    };
+
+    const enviarComentario = async (publicacion) => {
+      if (!usuario) {
+        navigate("/login");
+        return;
+      }
+      const id = publicacion.id;
+      const contenido = (comentarioNuevo[id] || "").trim();
+      if (!contenido) {
+        alert("Escribí un comentario antes de enviarlo.");
+        return;
+      }
+      if (procesandoComentario[id]) return;
+      setProcesandoComentario(prev => ({ ...prev, [id]: true }));
+      try {
+        const nuevo = await crearComentario(id, identidadUsuario || "Usuario", contenido);
+        setComentariosPorPublicacion(prev => ({
+          ...prev,
+          [id]: [...(Array.isArray(prev[id]) ? prev[id] : []), nuevo]
+        }));
+        setComentarioNuevo(prev => ({ ...prev, [id]: "" }));
+      } catch (e) {
+        alert("No se pudo publicar el comentario: " + (e?.message || ""));
+      } finally {
+        setProcesandoComentario(prev => ({ ...prev, [id]: false }));
+      }
+    };
 
   const [busqueda, setBusqueda] = useState("");
 
@@ -539,6 +611,14 @@ function Inicio() {
 
   const [usuario, setUsuario] =
     useState(null);
+  const identidadUsuario = usuario?.nombre || usuario?.email || usuario?.username || usuario?.nombreUsuario;
+  const [contenidoNuevo, setContenidoNuevo] = useState("");
+  const [tipoNuevo, setTipoNuevo] = useState("Servicio ofrecido");
+  const [ubicacionNueva, setUbicacionNueva] = useState("");
+  const [imagenBase64, setImagenBase64] = useState("");
+  const [guardandoPublicacion, setGuardandoPublicacion] = useState(false);
+  const [errorFormulario, setErrorFormulario] = useState("");
+  const [mensajeFormulario, setMensajeFormulario] = useState("");
 
 
   useEffect(() => {
@@ -610,6 +690,61 @@ function Inicio() {
     }
   }
 
+
+  async function crearPublicacionNueva() {
+    const contenido = contenidoNuevo.trim();
+
+    if (!contenido) {
+      setErrorFormulario("Escribí una descripción para publicar.");
+      return;
+    }
+
+    const autor = usuario?.nombre || usuario?.email ||
+      usuario?.username || usuario?.nombreUsuario;
+
+    if (!autor) {
+      setErrorFormulario("Iniciá sesión para crear una publicación.");
+      return;
+    }
+
+    setGuardandoPublicacion(true);
+    setErrorFormulario("");
+    setMensajeFormulario("");
+
+    try {
+      const response = await fetch(`${API}/publicaciones`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify({
+          autor,
+          contenido,
+          tipo: tipoNuevo,
+          ubicacion: ubicacionNueva.trim(),
+          imagenBase64: imagenBase64 || null
+        })
+      });
+
+      if (!response.ok) {
+        const detalle = await response.text();
+        throw new Error(detalle || `Error HTTP ${response.status}`);
+      }
+
+      setContenidoNuevo("");
+      setTipoNuevo("Servicio ofrecido");
+      setUbicacionNueva("");
+      setImagenBase64("");
+      setMensajeFormulario("¡Publicación guardada correctamente!");
+      await cargarPublicaciones();
+    } catch (e) {
+      console.error("Error al crear publicación:", e);
+      setErrorFormulario(e.message || "No se pudo guardar la publicación.");
+    } finally {
+      setGuardandoPublicacion(false);
+    }
+  }
 
   const publicacionesFiltradas =
     useMemo(() => {
@@ -789,9 +924,7 @@ function Inicio() {
                     <button
                       onClick={() => {
                         setMenuAbierto(false);
-                        alert(
-                          "El chat será conectado en el próximo módulo."
-                        );
+                        navigate("/mensajes");
                       }}
                     >
                       💬 Mensajes
@@ -860,20 +993,53 @@ function Inicio() {
 
 
             <h1>
-              Encontrá el profesional
+              Tu próximo trabajo o profesional,
               <span>
-                {" "}que necesitás.
+                {" "}a un solo lugar.
               </span>
             </h1>
 
 
             <p>
-              Buscá servicios, descubrí trabajadores
-              de confianza y contratá personas con
-              experiencia cerca tuyo.
+              Encontrá oportunidades laborales, mostrá tu experiencia,
+              contratá profesionales o publicá el servicio que necesitás.
             </p>
 
 
+            <div className="home-intent-actions">
+              <button
+                type="button"
+                className="intent-card intent-card-primary"
+                onClick={() => {
+                  setBusqueda("");
+                  setCategoriaActiva("Todos");
+                  document.getElementById("publicaciones")?.scrollIntoView({ behavior: "smooth" });
+                }}
+              >
+                <span className="intent-icon">↗</span>
+                <span className="intent-copy">
+                  <strong>Buscar trabajo</strong>
+                  <small>Explorá oportunidades y publicaciones</small>
+                </span>
+                <span className="intent-arrow">→</span>
+              </button>
+              <button
+                type="button"
+                className="intent-card"
+                onClick={() => {
+                  setBusqueda("");
+                  setCategoriaActiva("Todos");
+                  document.getElementById("publicaciones")?.scrollIntoView({ behavior: "smooth" });
+                }}
+              >
+                <span className="intent-icon">⌕</span>
+                <span className="intent-copy">
+                  <strong>Encontrar profesionales</strong>
+                  <small>Descubrí servicios y oficios</small>
+                </span>
+                <span className="intent-arrow">→</span>
+              </button>
+            </div>
             <div className="hero-search">
 
               <span>🔎</span>
@@ -1140,7 +1306,60 @@ function Inicio() {
           </div>
 
 
-          <div className="filter-bar">
+                    <div className="create-publication" style={{ marginBottom: "24px", padding: "20px", border: "1px solid var(--border-color, #ddd)", borderRadius: "14px" }}>
+            <h3>Crear una publicación</h3>
+            <form onSubmit={(e) => { e.preventDefault(); crearPublicacionNueva(); }}>
+              <label htmlFor="tipo-publicacion">Tipo de publicación</label>
+              <select id="tipo-publicacion" value={tipoNuevo} onChange={(e) => setTipoNuevo(e.target.value)} disabled={guardandoPublicacion} style={{ display: "block", width: "100%", margin: "8px 0 14px", padding: "10px" }}>
+                <option>Servicio ofrecido</option>
+                <option>Oferta de trabajo</option>
+                <option>Perfil de trabajador</option>
+                <option>Solicitud de servicio</option>
+                <option>Emprendimiento</option>
+              </select>
+
+              <label htmlFor="contenido-publicacion">Descripción</label>
+              <textarea id="contenido-publicacion" value={contenidoNuevo} onChange={(e) => setContenidoNuevo(e.target.value)} placeholder="Contá qué servicio ofrecés o qué necesitás..." required maxLength={5000} rows={4} disabled={guardandoPublicacion} style={{ display: "block", width: "100%", boxSizing: "border-box", margin: "8px 0 14px", padding: "12px" }} />
+
+              <label htmlFor="ubicacion-publicacion">Ubicación</label>
+              <input id="ubicacion-publicacion" value={ubicacionNueva} onChange={(e) => setUbicacionNueva(e.target.value)} placeholder="Ej.: Córdoba Capital" maxLength={150} disabled={guardandoPublicacion} style={{ display: "block", width: "100%", boxSizing: "border-box", margin: "8px 0 14px", padding: "10px" }} />
+
+              <label htmlFor="imagen-publicacion">Fotografía (opcional, máximo 2 MB)</label>
+              <input id="imagen-publicacion" type="file" accept="image/*" disabled={guardandoPublicacion} style={{ display: "block", margin: "8px 0 14px", maxWidth: "100%" }} onChange={(e) => {
+                const archivo = e.target.files?.[0];
+                setImagenBase64("");
+                setErrorFormulario("");
+                if (!archivo) return;
+                if (!archivo.type.startsWith("image/")) {
+                  setErrorFormulario("Seleccioná un archivo de imagen.");
+                  e.target.value = "";
+                  return;
+                }
+                if (archivo.size > 2 * 1024 * 1024) {
+                  setErrorFormulario("La imagen supera el límite de 2 MB.");
+                  e.target.value = "";
+                  return;
+                }
+                const lector = new FileReader();
+                lector.onload = () => {
+                  if (typeof lector.result === "string") setImagenBase64(lector.result);
+                  else setErrorFormulario("No se pudo leer la imagen.");
+                };
+                lector.onerror = () => setErrorFormulario("No se pudo leer la imagen.");
+                lector.readAsDataURL(archivo);
+              }} />
+
+              {imagenBase64 && <img src={imagenBase64} alt="Vista previa" style={{ display: "block", maxWidth: "100%", maxHeight: "240px", objectFit: "contain", marginBottom: "14px", borderRadius: "10px" }} />}
+
+              {errorFormulario && <p role="alert" style={{ color: "#b42318" }}>{errorFormulario}</p>}
+              {mensajeFormulario && <p role="status" style={{ color: "#16803c" }}>{mensajeFormulario}</p>}
+
+              <button type="submit" className="btn-primary" disabled={guardandoPublicacion}>
+                {guardandoPublicacion ? "Guardando..." : "Publicar"}
+              </button>
+            </form>
+          </div>
+<div className="filter-bar">
 
             <div className="filter-search">
 
@@ -1302,9 +1521,21 @@ function Inicio() {
 
                     <div className="publication-body">
 
-                      <span className="publication-type">
-                        {publicacion.tipo ||
-                          "Servicio"}
+
+                      {publicacion.imagenBase64 && (
+                        <img
+                          src={publicacion.imagenBase64}
+                          alt="Imagen de la publicación"
+                          loading="lazy"
+                          style={{ display: "block", width: "100%", maxHeight: "320px", objectFit: "contain", borderRadius: "10px", marginBottom: "14px" }}
+                        />
+                      )}
+<span className="publication-type">
+                        {/empresa|contrat|busca personal|vacante/i.test(`${publicacion.tipo || ""} ${publicacion.contenido || ""}`)
+                          ? "EMPRESA · BUSCA PERSONAL"
+                          : /empleo|trabajo|postul|busco trabajo|se busca/i.test(`${publicacion.tipo || ""} ${publicacion.contenido || ""}`)
+                            ? "OPORTUNIDAD LABORAL"
+                            : "SERVICIO / OFICIO"}
                       </span>
 
                       <h3>
@@ -1345,34 +1576,79 @@ function Inicio() {
 
 
                     <div className="publication-footer">
+  <button
+    type="button"
+    className="contact-button"
+    disabled={!!procesandoInteres[publicacion.id]}
+    onClick={() => manejarMeGusta(publicacion)}
+  >
+    ❤️ Me interesa ({cantidadesInteres[publicacion.id] ?? publicacion.interesados ?? 0})
+  </button>
 
-                      <span>
-                        ❤️ {publicacion.interesados || 0}
-                      </span>
+  <button
+    type="button"
+    className="contact-button"
+    onClick={() => alternarComentarios(publicacion)}
+  >
+    💬 Comentarios ({comentariosPorPublicacion[publicacion.id]?.length ?? publicacion.comentarios ?? 0})
+  </button>
 
-                      <span>
-                        💬 {publicacion.comentarios || 0}
-                      </span>
+  <button
+    type="button"
+    className="contact-button"
+    onClick={() => {
+      if (!usuario) {
+        navigate("/login");
+        return;
+      }
+      const receptor = publicacion.autor;
+      const emisor = usuario.nombre || usuario.email || usuario.username || usuario.nombreUsuario;
+      if (!receptor || !emisor) {
+        alert("No se pudo identificar a los usuarios de la conversación.");
+        return;
+      }
+      if (receptor === emisor) {
+        alert("No podés iniciar una conversación con tu propia publicación.");
+        return;
+      }
+      navigate("/mensajes", { state: { receptor } });
+    }}
+  >
+    Contactar
+  </button>
 
-                      <button
-                        className="contact-button"
-                        onClick={() => {
-
-                          if (!usuario) {
-                            navigate("/login");
-                            return;
-                          }
-
-                          alert(
-                            "El sistema de mensajes será conectado en el próximo módulo."
-                          );
-
-                        }}
-                      >
-                        Contactar
-                      </button>
-
-                    </div>
+  {comentariosAbiertos[publicacion.id] && (
+    <div className="comments-panel">
+      <div className="comments-list">
+        {(comentariosPorPublicacion[publicacion.id] || []).map((comentario, indice) => (
+          <div key={comentario.id ?? indice} className="comment-item">
+            <strong>{comentario.autor || comentario.usuario || "Usuario"}</strong>
+            <p>{comentario.contenido || comentario.texto || ""}</p>
+          </div>
+        ))}
+        {comentariosPorPublicacion[publicacion.id]?.length === 0 && (
+          <p>Todavía no hay comentarios.</p>
+        )}
+      </div>
+      <textarea
+        value={comentarioNuevo[publicacion.id] || ""}
+        onChange={(evento) => setComentarioNuevo(prev => ({
+          ...prev, [publicacion.id]: evento.target.value
+        }))}
+        placeholder="Escribí un comentario..."
+        rows={2}
+      />
+      <button
+        type="button"
+        className="contact-button"
+        disabled={!!procesandoComentario[publicacion.id]}
+        onClick={() => enviarComentario(publicacion)}
+      >
+        {procesandoComentario[publicacion.id] ? "Enviando..." : "Publicar comentario"}
+      </button>
+    </div>
+  )}
+</div>
 
                   </article>
 
