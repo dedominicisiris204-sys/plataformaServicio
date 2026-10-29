@@ -54,16 +54,11 @@ public class UsuarioControlador {
 
     // 4. ELIMINAR UN USUARIO (DELETE)
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> eliminar(@PathVariable Long id) {
-        try {
-            // Nota: Asegúrate de tener el método eliminar en tu UsuarioServicio.
-            // Si heredas de JpaRepository, en tu servicio puedes llamar a: usuarioRepository.deleteById(id);
-            // Aquí simulamos la llamada de eliminación directa para no romper tu flujo actual:
-            // usuarioServicio.eliminarPorId(id);
-
-            return new ResponseEntity<>("Usuario eliminado correctamente", HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>("Error al eliminar usuario", HttpStatus.INTERNAL_SERVER_ERROR);
+    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
+        if (!usuarioServicio.eliminarPorId(id)) {
+            return ResponseEntity.notFound().build();
         }
+
+        return ResponseEntity.noContent().build();
     }
 }

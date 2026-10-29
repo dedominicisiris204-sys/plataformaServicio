@@ -27,8 +27,13 @@ public class UsuarioServicio {
         return usuarioRepository.findById(id).orElse(null);
     }
 
-    // Lógica para eliminar un usuario físicamente de la base de datos
-    public void eliminarPorId(Long id) {
+    // Elimina un usuario solo si existe y permite al controlador responder 404.
+    public boolean eliminarPorId(Long id) {
+        if (!usuarioRepository.existsById(id)) {
+            return false;
+        }
+
         usuarioRepository.deleteById(id);
+        return true;
     }
 }
