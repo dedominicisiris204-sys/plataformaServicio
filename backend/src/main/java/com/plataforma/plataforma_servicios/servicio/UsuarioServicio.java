@@ -3,6 +3,8 @@ package com.plataforma.plataforma_servicios.servicio;
 import com.plataforma.plataforma_servicios.entidad.Usuario;
 import com.plataforma.plataforma_servicios.repositorio.UsuarioRepository;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -94,7 +96,6 @@ public class UsuarioServicio {
         }
 
         // Compatibilidad transitoria: cuentas antiguas guardadas en texto plano.
-        // Si el acceso es válido, actualiza la contraseña a BCrypt en ese momento.
         if (guardada.equals(passwordIngresada)) {
             usuario.setPassword(passwordEncoder.encode(passwordIngresada));
             usuarioRepository.save(usuario);
@@ -111,6 +112,16 @@ public class UsuarioServicio {
 
     public List<Usuario> listarTodos() {
         return usuarioRepository.findAll();
+    }
+
+    public Page<Usuario> listarPaginado(Pageable pageable) {
+        return usuarioRepository.findAll(pageable);
+    }
+
+    public Page<Usuario> listarPaginado(Pageable pageable, String busqueda) {
+        if (busqueda == null || busqueda.isBlank()) return usuarioRepository.findAll(pageable);
+        String termino = busqueda.trim();
+        return usuarioRepository.findByNombreContainingIgnoreCaseOrEmailContainingIgnoreCase(termino, termino, pageable);
     }
 
     public Usuario buscarPorId(Long id) {

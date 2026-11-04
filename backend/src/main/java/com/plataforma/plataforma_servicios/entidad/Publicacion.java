@@ -16,6 +16,9 @@ public class Publicacion {
     @Column(nullable = false, length = 150)
     private String autor;
 
+    @Column(name = "autor_usuario_id")
+    private Long autorUsuarioId;
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String contenido;
 
@@ -64,6 +67,10 @@ public class Publicacion {
     public void setAutor(String autor) {
         this.autor = autor;
     }
+
+    public Long getAutorUsuarioId() { return autorUsuarioId; }
+
+    public void setAutorUsuarioId(Long autorUsuarioId) { this.autorUsuarioId = autorUsuarioId; }
 
     public String getContenido() {
         return contenido;

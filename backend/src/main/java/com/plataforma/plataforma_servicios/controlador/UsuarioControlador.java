@@ -2,7 +2,11 @@ package com.plataforma.plataforma_servicios.controlador;
 
 import com.plataforma.plataforma_servicios.entidad.Usuario;
 import com.plataforma.plataforma_servicios.servicio.UsuarioServicio;
+import com.plataforma.plataforma_servicios.servicio.UsuarioEliminacionServicio;
 import com.plataforma.plataforma_servicios.servicio.UsuarioServicio.EmailDuplicadoException;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -17,14 +21,31 @@ import java.util.Map;
 public class UsuarioControlador {
 
     private final UsuarioServicio usuarioServicio;
+    private final UsuarioEliminacionServicio eliminacionServicio;
 
-    public UsuarioControlador(UsuarioServicio usuarioServicio) {
+    public UsuarioControlador(UsuarioServicio usuarioServicio, UsuarioEliminacionServicio eliminacionServicio) {
         this.usuarioServicio = usuarioServicio;
+        this.eliminacionServicio = eliminacionServicio;
     }
 
     @GetMapping
-    public ResponseEntity<List<Usuario>> obtenerTodos() {
+    public ResponseEntity<?> obtenerTodos(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String q) {
+
+        if (page != null && size != null && size > 0) {
+            Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(size, 100), Sort.by(Sort.Direction.ASC, "id"));
+            return ResponseEntity.ok(usuarioServicio.listarPaginado(pageable, q));
+        }
+
         return ResponseEntity.ok(usuarioServicio.listarTodos());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Usuario> obtenerPorId(@PathVariable Long id) {
+        Usuario usuario = usuarioServicio.buscarPorId(id);
+        return usuario == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(usuario);
     }
 
     @PostMapping
@@ -38,7 +59,6 @@ public class UsuarioControlador {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
-            // No exponer detalles internos de la base de datos al cliente.
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("No se pudo registrar la cuenta. Revisá los datos e intentá nuevamente.");
         }
@@ -87,7 +107,7 @@ public class UsuarioControlador {
         if (usuarioServicio.buscarPorId(id) == null) {
             return ResponseEntity.notFound().build();
         }
-        usuarioServicio.eliminarPorId(id);
+        eliminacionServicio.eliminar(id);
         return ResponseEntity.ok("Usuario eliminado correctamente");
     }
 }
