@@ -609,93 +609,97 @@ function Inicio() {
   const [menuAbierto, setMenuAbierto] =
     useState(false);
 
-  const [usuario, setUsuario] =
-    useState(null);
+  const [usuario, setUsuario] = useState(null);
   const identidadUsuario = usuario?.nombre || usuario?.email || usuario?.username || usuario?.nombreUsuario;
   const [contenidoNuevo, setContenidoNuevo] = useState("");
   const [tipoNuevo, setTipoNuevo] = useState("Servicio ofrecido");
   const [ubicacionNueva, setUbicacionNueva] = useState("");
   const [imagenBase64, setImagenBase64] = useState("");
+  const [archivoFoto, setArchivoFoto] = useState(null);
+  const [previewFoto, setPreviewFoto] = useState("");
   const [guardandoPublicacion, setGuardandoPublicacion] = useState(false);
   const [errorFormulario, setErrorFormulario] = useState("");
   const [mensajeFormulario, setMensajeFormulario] = useState("");
 
+  // PaginaciÃ³n de publicaciones (HU-16)
+  const [paginaActual, setPaginaActual] = useState(0);
+  const [hayMasPaginas, setHayMasPaginas] = useState(false);
+  const [cargandoMas, setCargandoMas] = useState(false);
+
+  // Solicitud de Presupuestos y Contrataciones (HU-15)
+  const [modalSolicitudAbierto, setModalSolicitudAbierto] = useState(false);
+  const [solicitudTitulo, setSolicitudTitulo] = useState("");
+  const [solicitudCategoria, setSolicitudCategoria] = useState("Electricidad");
+  const [solicitudUbicacion, setSolicitudUbicacion] = useState("");
+  const [solicitudPresupuesto, setSolicitudPresupuesto] = useState("");
+  const [solicitudDescripcion, setSolicitudDescripcion] = useState("");
+  const [enviandoSolicitud, setEnviandoSolicitud] = useState(false);
+  const [mensajeSolicitud, setMensajeSolicitud] = useState("");
+  const [errorSolicitud, setErrorSolicitud] = useState("");
+
+  const [modalMisSolicitudes, setModalMisSolicitudes] = useState(false);
+  const [misSolicitudes, setMisSolicitudes] = useState([]);
+  const [cargandoSolicitudes, setCargandoSolicitudes] = useState(false);
 
   useEffect(() => {
-
-    const guardado =
-      localStorage.getItem("usuario");
-
+    const guardado = localStorage.getItem("usuario");
     if (guardado) {
-
       try {
-
-        setUsuario(
-          JSON.parse(guardado)
-        );
-
+        setUsuario(JSON.parse(guardado));
       } catch {
-
         localStorage.removeItem("usuario");
-
       }
-
     }
-
-    cargarPublicaciones();
-
+    cargarPublicaciones(true, 0);
   }, []);
 
-
-  async function cargarPublicaciones() {
-
+  async function cargarPublicaciones(reiniciar = true, numPagina = 0) {
     try {
-
-      setCargando(true);
-
+      if (reiniciar) {
+        setCargando(true);
+        setPaginaActual(0);
+      } else {
+        setCargandoMas(true);
+      }
       setError("");
 
-      const response =
-        await fetch(`${API}/publicaciones`);
-
+      const response = await fetch(`${API}/publicaciones?page=${numPagina}&size=6`);
       if (!response.ok) {
-        throw new Error(
-          "No se pudieron cargar las publicaciones"
-        );
+        throw new Error("No se pudieron cargar las publicaciones");
       }
+      const data = await response.json();
 
-      const data =
-        await response.json();
-
-      setPublicaciones(
-        Array.isArray(data)
-          ? data
-          : []
-      );
-
+      if (data && Array.isArray(data.content)) {
+        setPublicaciones(prev => reiniciar ? data.content : [...prev, ...data.content]);
+        setHayMasPaginas(!data.last);
+      } else if (Array.isArray(data)) {
+        setPublicaciones(data);
+        setHayMasPaginas(false);
+      } else {
+        setPublicaciones([]);
+        setHayMasPaginas(false);
+      }
     } catch (e) {
-
       console.error(e);
-
-      setError(
-        "No pudimos conectar con las publicaciones del servidor."
-      );
-
-      setPublicaciones([]);
-
+      setError("No pudimos conectar con las publicaciones del servidor.");
+      if (reiniciar) setPublicaciones([]);
     } finally {
-
       setCargando(false);
-
+      setCargandoMas(false);
     }
   }
 
+  async function cargarMasPublicaciones() {
+    const siguiente = paginaActual + 1;
+    setPaginaActual(siguiente);
+    await cargarPublicaciones(false, siguiente);
+  }
 
   async function crearPublicacionNueva() {
     const contenido = contenidoNuevo.trim();
 
     if (!contenido) {
-      setErrorFormulario("Escribí una descripción para publicar.");
+      setErrorFormulario("EscribÃ­ una descripciÃ³n para publicar.");
       return;
     }
 
@@ -703,7 +707,7 @@ function Inicio() {
       usuario?.username || usuario?.nombreUsuario;
 
     if (!autor) {
-      setErrorFormulario("Iniciá sesión para crear una publicación.");
+      setErrorFormulario("IniciÃ¡ sesiÃ³n para crear una publicaciÃ³n.");
       return;
     }
 
@@ -712,6 +716,26 @@ function Inicio() {
     setMensajeFormulario("");
 
     try {
+      let urlFinal = null;
+
+      // Carga real de imagen al servicio /api/archivos/subir (HU-14)
+      if (archivoFoto) {
+        try {
+          const formData = new FormData();
+          formData.append("archivo", archivoFoto);
+          const uploadRes = await fetch(`${API}/archivos/subir`, {
+            method: "POST",
+            body: formData
+          });
+          if (uploadRes.ok) {
+            const uploadData = await uploadRes.json();
+            urlFinal = uploadData.url;
+          }
+        } catch (upErr) {
+          console.warn("Fallo al subir archivo, usando vista previa:", upErr);
+        }
+      }
+
       const response = await fetch(`${API}/publicaciones`, {
         method: "POST",
         headers: {
@@ -723,7 +747,7 @@ function Inicio() {
           contenido,
           tipo: tipoNuevo,
           ubicacion: ubicacionNueva.trim(),
-          imagenBase64: imagenBase64 || null
+          imagenBase64: urlFinal || previewFoto || imagenBase64 || null
         })
       });
 
@@ -736,13 +760,90 @@ function Inicio() {
       setTipoNuevo("Servicio ofrecido");
       setUbicacionNueva("");
       setImagenBase64("");
-      setMensajeFormulario("¡Publicación guardada correctamente!");
-      await cargarPublicaciones();
+      setArchivoFoto(null);
+      setPreviewFoto("");
+      setMensajeFormulario("Â¡PublicaciÃ³n guardada correctamente!");
+      await cargarPublicaciones(true, 0);
     } catch (e) {
-      console.error("Error al crear publicación:", e);
-      setErrorFormulario(e.message || "No se pudo guardar la publicación.");
+      console.error("Error al crear publicaciÃ³n:", e);
+      setErrorFormulario(e.message || "No se pudo guardar la publicaciÃ³n.");
     } finally {
       setGuardandoPublicacion(false);
+    }
+  }
+
+  // Solicitud de Presupuesto (HU-15)
+  async function enviarSolicitudPresupuesto(e) {
+    e.preventDefault();
+    if (!usuario) {
+      navigate("/login");
+      return;
+    }
+    if (!solicitudTitulo.trim() || !solicitudDescripcion.trim()) {
+      setErrorSolicitud("CompletÃ¡ el tÃ­tulo y la descripciÃ³n del trabajo solicitado.");
+      return;
+    }
+
+    setEnviandoSolicitud(true);
+    setErrorSolicitud("");
+    setMensajeSolicitud("");
+
+    try {
+      const response = await fetch(`${API}/solicitudes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          creadorUsuarioId: usuario.id,
+          titulo: solicitudTitulo.trim(),
+          categoria: solicitudCategoria,
+          ubicacion: solicitudUbicacion.trim(),
+          presupuesto: solicitudPresupuesto ? Number(solicitudPresupuesto) : null,
+          descripcion: solicitudDescripcion.trim(),
+          estado: "PENDIENTE"
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "No se pudo enviar la solicitud");
+      }
+
+      setMensajeSolicitud("Â¡Solicitud enviada con Ã©xito! Los profesionales del rubro podrÃ¡n coordinar con vos.");
+      setSolicitudTitulo("");
+      setSolicitudDescripcion("");
+      setSolicitudUbicacion("");
+      setSolicitudPresupuesto("");
+      setTimeout(() => {
+        setModalSolicitudAbierto(false);
+        setMensajeSolicitud("");
+      }, 2500);
+    } catch (err) {
+      setErrorSolicitud(err.message || "Error al procesar la solicitud.");
+    } finally {
+      setEnviandoSolicitud(false);
+    }
+  }
+
+  async function abrirMisSolicitudes() {
+    if (!usuario) {
+      navigate("/login");
+      return;
+    }
+    setModalMisSolicitudes(true);
+    setCargandoSolicitudes(true);
+    try {
+      const res = await fetch(`${API}/solicitudes/usuario/${usuario.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setMisSolicitudes(Array.isArray(data) ? data : []);
+      }
+    } catch (e) {
+      console.error(e);
+      setMisSolicitudes([]);
+    } finally {
+      setCargandoSolicitudes(false);
     }
   }
 
@@ -928,6 +1029,15 @@ function Inicio() {
                       }}
                     >
                       💬 Mensajes
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setMenuAbierto(false);
+                        abrirMisSolicitudes();
+                      }}
+                    >
+                      ðŸ“‹ Mis Solicitudes
                     </button>
 
                     <button
@@ -1324,32 +1434,38 @@ function Inicio() {
               <label htmlFor="ubicacion-publicacion">Ubicación</label>
               <input id="ubicacion-publicacion" value={ubicacionNueva} onChange={(e) => setUbicacionNueva(e.target.value)} placeholder="Ej.: Córdoba Capital" maxLength={150} disabled={guardandoPublicacion} style={{ display: "block", width: "100%", boxSizing: "border-box", margin: "8px 0 14px", padding: "10px" }} />
 
-              <label htmlFor="imagen-publicacion">Fotografía (opcional, máximo 2 MB)</label>
+              <label htmlFor="imagen-publicacion">FotografÃ­a o Imagen (opcional, mÃ¡x. 5 MB)</label>
               <input id="imagen-publicacion" type="file" accept="image/*" disabled={guardandoPublicacion} style={{ display: "block", margin: "8px 0 14px", maxWidth: "100%" }} onChange={(e) => {
                 const archivo = e.target.files?.[0];
-                setImagenBase64("");
                 setErrorFormulario("");
-                if (!archivo) return;
+                if (!archivo) {
+                  setArchivoFoto(null);
+                  setPreviewFoto("");
+                  return;
+                }
                 if (!archivo.type.startsWith("image/")) {
-                  setErrorFormulario("Seleccioná un archivo de imagen.");
+                  setErrorFormulario("SeleccionÃ¡ un archivo de imagen vÃ¡lido (JPG, PNG, WEBP).");
                   e.target.value = "";
                   return;
                 }
-                if (archivo.size > 2 * 1024 * 1024) {
-                  setErrorFormulario("La imagen supera el límite de 2 MB.");
+                if (archivo.size > 5 * 1024 * 1024) {
+                  setErrorFormulario("La imagen supera el lÃ­mite de 5 MB.");
                   e.target.value = "";
                   return;
                 }
-                const lector = new FileReader();
-                lector.onload = () => {
-                  if (typeof lector.result === "string") setImagenBase64(lector.result);
-                  else setErrorFormulario("No se pudo leer la imagen.");
-                };
-                lector.onerror = () => setErrorFormulario("No se pudo leer la imagen.");
-                lector.readAsDataURL(archivo);
+                setArchivoFoto(archivo);
+                const prevUrl = URL.createObjectURL(archivo);
+                setPreviewFoto(prevUrl);
               }} />
 
-              {imagenBase64 && <img src={imagenBase64} alt="Vista previa" style={{ display: "block", maxWidth: "100%", maxHeight: "240px", objectFit: "contain", marginBottom: "14px", borderRadius: "10px" }} />}
+              {(previewFoto || imagenBase64) && (
+                <div style={{ position: "relative", marginBottom: "14px" }}>
+                  <img src={previewFoto || imagenBase64} alt="Vista previa" style={{ display: "block", maxWidth: "100%", maxHeight: "240px", objectFit: "contain", borderRadius: "10px" }} />
+                  <button type="button" onClick={() => { setArchivoFoto(null); setPreviewFoto(""); setImagenBase64(""); }} style={{ marginTop: "6px", fontSize: "12px", background: "#f8d7da", color: "#721c24", border: "none", padding: "4px 10px", borderRadius: "6px", cursor: "pointer" }}>
+                    Quitar imagen
+                  </button>
+                </div>
+              )}
 
               {errorFormulario && <p role="alert" style={{ color: "#b42318" }}>{errorFormulario}</p>}
               {mensajeFormulario && <p role="status" style={{ color: "#16803c" }}>{mensajeFormulario}</p>}
@@ -1812,6 +1928,125 @@ function Inicio() {
 
       </main>
 
+
+            {/* MODAL SOLICITUD DE PRESUPUESTO (HU-15) */}
+      {modalSolicitudAbierto && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: "16px" }}>
+          <div style={{ background: "#fff", borderRadius: "14px", maxWidth: "520px", width: "100%", padding: "24px", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 10px 25px rgba(0,0,0,0.2)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ margin: 0, color: "#1e293b" }}>ðŸ“‹ Solicitar Presupuesto / Trabajo</h3>
+              <button type="button" onClick={() => setModalSolicitudAbierto(false)} style={{ background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "#64748b" }}>âœ•</button>
+            </div>
+
+            <form onSubmit={enviarSolicitudPresupuesto}>
+              <label style={{ display: "block", marginBottom: "6px", fontWeight: "600", fontSize: "14px" }}>TÃ­tulo del trabajo requerido</label>
+              <input
+                type="text"
+                value={solicitudTitulo}
+                onChange={(e) => setSolicitudTitulo(e.target.value)}
+                placeholder="Ej.: Arreglo de pÃ©rdida de agua en baÃ±o"
+                required
+                maxLength={180}
+                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", marginBottom: "14px", boxSizing: "border-box" }}
+              />
+
+              <label style={{ display: "block", marginBottom: "6px", fontWeight: "600", fontSize: "14px" }}>Rubro / Oficio</label>
+              <select
+                value={solicitudCategoria}
+                onChange={(e) => setSolicitudCategoria(e.target.value)}
+                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", marginBottom: "14px", boxSizing: "border-box" }}
+              >
+                {categorias.map((cat, i) => (
+                  <option key={i} value={cat.nombre}>{cat.nombre}</option>
+                ))}
+              </select>
+
+              <label style={{ display: "block", marginBottom: "6px", fontWeight: "600", fontSize: "14px" }}>UbicaciÃ³n / Zona</label>
+              <input
+                type="text"
+                value={solicitudUbicacion}
+                onChange={(e) => setSolicitudUbicacion(e.target.value)}
+                placeholder="Ej.: Barrio Alberdi, CÃ³rdoba"
+                maxLength={150}
+                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", marginBottom: "14px", boxSizing: "border-box" }}
+              />
+
+              <label style={{ display: "block", marginBottom: "6px", fontWeight: "600", fontSize: "14px" }}>Presupuesto estimado (opcional en $)</label>
+              <input
+                type="number"
+                value={solicitudPresupuesto}
+                onChange={(e) => setSolicitudPresupuesto(e.target.value)}
+                placeholder="Ej.: 15000"
+                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", marginBottom: "14px", boxSizing: "border-box" }}
+              />
+
+              <label style={{ display: "block", marginBottom: "6px", fontWeight: "600", fontSize: "14px" }}>DescripciÃ³n detallada del problema o servicio</label>
+              <textarea
+                value={solicitudDescripcion}
+                onChange={(e) => setSolicitudDescripcion(e.target.value)}
+                placeholder="DetallÃ¡ los detalles del trabajo, horarios preferidos de visita o materiales necesarios..."
+                required
+                rows={4}
+                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", marginBottom: "14px", boxSizing: "border-box" }}
+              />
+
+              {errorSolicitud && <p style={{ color: "#b42318", fontSize: "14px", margin: "0 0 12px" }}>{errorSolicitud}</p>}
+              {mensajeSolicitud && <p style={{ color: "#16803c", fontSize: "14px", margin: "0 0 12px" }}>{mensajeSolicitud}</p>}
+
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                <button type="button" onClick={() => setModalSolicitudAbierto(false)} style={{ padding: "10px 16px", borderRadius: "8px", border: "1px solid #cbd5e1", background: "#f8fafc", cursor: "pointer" }}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-primary" disabled={enviandoSolicitud} style={{ padding: "10px 20px" }}>
+                  {enviandoSolicitud ? "Enviando..." : "Enviar Solicitud"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL MIS SOLICITUDES (HU-15) */}
+      {modalMisSolicitudes && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: "16px" }}>
+          <div style={{ background: "#fff", borderRadius: "14px", maxWidth: "600px", width: "100%", padding: "24px", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 10px 25px rgba(0,0,0,0.2)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ margin: 0, color: "#1e293b" }}>ðŸ“‹ Mis Solicitudes de Presupuesto</h3>
+              <button type="button" onClick={() => setModalMisSolicitudes(false)} style={{ background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "#64748b" }}>âœ•</button>
+            </div>
+
+            {cargandoSolicitudes ? (
+              <p style={{ textAlign: "center", padding: "20px" }}>Cargando solicitudes...</p>
+            ) : misSolicitudes.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "30px", color: "#64748b" }}>
+                <p>TodavÃ­a no enviaste ninguna solicitud de presupuesto.</p>
+                <button type="button" className="btn-primary" onClick={() => { setModalMisSolicitudes(false); setModalSolicitudAbierto(true); }} style={{ marginTop: "10px" }}>
+                  Crear primera solicitud
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {misSolicitudes.map((sol) => (
+                  <div key={sol.id} style={{ border: "1px solid #e2e8f0", borderRadius: "10px", padding: "14px", background: "#f8fafc" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                      <strong style={{ fontSize: "16px", color: "#0f172a" }}>{sol.titulo}</strong>
+                      <span style={{ fontSize: "12px", fontWeight: "700", padding: "3px 8px", borderRadius: "6px", background: sol.estado === "ACEPTADA" ? "#dcfce7" : sol.estado === "RECHAZADA" ? "#fee2e2" : "#fef9c3", color: sol.estado === "ACEPTADA" ? "#166534" : sol.estado === "RECHAZADA" ? "#991b1b" : "#854d0e" }}>
+                        {sol.estado || "PENDIENTE"}
+                      </span>
+                    </div>
+                    <p style={{ margin: "4px 0", color: "#475569", fontSize: "14px" }}>{sol.descripcion}</p>
+                    <div style={{ display: "flex", gap: "14px", fontSize: "12px", color: "#64748b", marginTop: "8px" }}>
+                      {sol.categoria && <span>ðŸ”§ {sol.categoria}</span>}
+                      {sol.ubicacion && <span>ðŸ“ {sol.ubicacion}</span>}
+                      {sol.presupuesto && <span>ðŸ’° Estimado: ${sol.presupuesto}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* FOOTER */}
 

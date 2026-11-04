@@ -2,6 +2,9 @@ package com.plataforma.plataforma_servicios.controlador;
 
 import com.plataforma.plataforma_servicios.entidad.Publicacion;
 import com.plataforma.plataforma_servicios.repositorio.PublicacionRepository;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,8 +23,18 @@ public class PublicacionController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Publicacion>> obtenerTodas() {
-        return ResponseEntity.ok(publicacionRepository.findAll());
+    public ResponseEntity<?> obtenerTodas(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+
+        Sort ordenReciente = Sort.by(Sort.Direction.DESC, "id");
+
+        if (page != null && size != null && size > 0) {
+            Pageable pageable = PageRequest.of(Math.max(0, page), size, ordenReciente);
+            return ResponseEntity.ok(publicacionRepository.findAll(pageable));
+        }
+
+        return ResponseEntity.ok(publicacionRepository.findAll(ordenReciente));
     }
 
     @GetMapping("/{id}")
