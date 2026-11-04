@@ -42,6 +42,9 @@ public class Publicacion {
     @Column(nullable = false)
     private int comentarios = 0;
 
+    @Column(name = "imagen_base64", columnDefinition = "LONGTEXT")
+    private String imagenBase64;
+
     public Publicacion() {
         this.fecha = LocalDateTime.now();
     }
@@ -116,5 +119,13 @@ public class Publicacion {
 
     public void setComentarios(int comentarios) {
         this.comentarios = comentarios;
+    }
+
+    public String getImagenBase64() {
+        return imagenBase64;
+    }
+
+    public void setImagenBase64(String imagenBase64) {
+        this.imagenBase64 = imagenBase64;
     }
 }
