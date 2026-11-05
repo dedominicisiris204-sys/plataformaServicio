@@ -51,6 +51,16 @@ public class UsuarioServicio {
         usuario.setNombre(nombre);
         usuario.setEmail(email);
 
+        if (usuario.getRol() == null || usuario.getRol().isBlank()) {
+            usuario.setRol(Usuario.ROL_CLIENTE);
+        } else {
+            String rol = usuario.getRol().trim().toUpperCase(Locale.ROOT);
+            if (!Usuario.ROL_CLIENTE.equals(rol) && !Usuario.ROL_PROFESIONAL.equals(rol) && !Usuario.ROL_ADMIN.equals(rol)) {
+                throw new IllegalArgumentException("Rol inválido. Debe ser ROL_CLIENTE, ROL_PROFESIONAL o ROL_ADMIN.");
+            }
+            usuario.setRol(rol);
+        }
+
         boolean emailEnUso = usuario.getId() == null
                 ? usuarioRepository.existsByEmailIgnoreCase(email)
                 : usuarioRepository.existsByEmailIgnoreCaseAndIdNot(email, usuario.getId());

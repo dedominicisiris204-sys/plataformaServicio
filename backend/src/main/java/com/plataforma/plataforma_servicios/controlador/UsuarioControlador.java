@@ -2,10 +2,8 @@ package com.plataforma.plataforma_servicios.controlador;
 
 import com.plataforma.plataforma_servicios.entidad.Usuario;
 import com.plataforma.plataforma_servicios.servicio.UsuarioServicio;
-import com.plataforma.plataforma_servicios.servicio.UsuarioServicio.EmailDuplicadoException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,19 +27,9 @@ public class UsuarioControlador {
 
     @PostMapping
     public ResponseEntity<String> guardar(@RequestBody Usuario usuario) {
-        try {
-            Usuario nuevoUsuario = usuarioServicio.registrarUsuario(usuario);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body("USUARIO REGISTRADO CORRECTAMENTE. ID=" + nuevoUsuario.getId());
-        } catch (EmailDuplicadoException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        } catch (Exception e) {
-            // No exponer detalles internos de la base de datos al cliente.
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("No se pudo registrar la cuenta. Revisá los datos e intentá nuevamente.");
-        }
+        Usuario nuevoUsuario = usuarioServicio.registrarUsuario(usuario);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body("USUARIO REGISTRADO CORRECTAMENTE. ID=" + nuevoUsuario.getId());
     }
 
     @PostMapping("/login")
@@ -63,23 +51,15 @@ public class UsuarioControlador {
         if (existente == null) {
             return ResponseEntity.notFound().build();
         }
-        try {
-            if (detalles.getNombre() != null) existente.setNombre(detalles.getNombre());
-            if (detalles.getEmail() != null) existente.setEmail(detalles.getEmail());
-            if (detalles.getPassword() != null && !detalles.getPassword().isBlank()) {
-                existente.setPassword(detalles.getPassword());
-            }
-            return ResponseEntity.ok(usuarioServicio.registrarUsuario(existente));
-        } catch (EmailDuplicadoException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+        if (detalles.getNombre() != null) existente.setNombre(detalles.getNombre());
+        if (detalles.getEmail() != null) existente.setEmail(detalles.getEmail());
+        if (detalles.getPassword() != null && !detalles.getPassword().isBlank()) {
+            existente.setPassword(detalles.getPassword());
         }
-    }
-
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<String> errorBody(HttpMessageNotReadableException e) {
-        return ResponseEntity.badRequest().body("El cuerpo de la solicitud no contiene un JSON válido.");
+        if (detalles.getRol() != null && !detalles.getRol().isBlank()) {
+            existente.setRol(detalles.getRol());
+        }
+        return ResponseEntity.ok(usuarioServicio.registrarUsuario(existente));
     }
 
     @DeleteMapping("/{id}")

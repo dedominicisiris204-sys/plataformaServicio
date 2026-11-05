@@ -8,6 +8,7 @@ public class UsuarioBuilder {
     private String nombre;
     private String email;
     private String password;
+    private String rol = Usuario.ROL_CLIENTE;
     private LocalDate fechaRegistro;
     private Perfil perfil;
 
@@ -34,6 +35,11 @@ public class UsuarioBuilder {
         return this;
     }
 
+    public UsuarioBuilder rol(String rol) {
+        this.rol = rol;
+        return this;
+    }
+
     public UsuarioBuilder fechaRegistro(LocalDate fechaRegistro) {
         this.fechaRegistro = fechaRegistro;
         return this;
@@ -51,6 +57,7 @@ public class UsuarioBuilder {
         usuario.setNombre(nombre);
         usuario.setEmail(email);
         usuario.setPassword(password);
+        usuario.setRol(rol != null && !rol.isBlank() ? rol : Usuario.ROL_CLIENTE);
         usuario.setFechaRegistro(fechaRegistro);
         usuario.setPerfil(perfil);
 

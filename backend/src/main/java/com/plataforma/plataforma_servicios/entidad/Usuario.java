@@ -15,6 +15,10 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class Usuario implements Serializable {
 
+    public static final String ROL_CLIENTE = "ROL_CLIENTE";
+    public static final String ROL_PROFESIONAL = "ROL_PROFESIONAL";
+    public static final String ROL_ADMIN = "ROL_ADMIN";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -28,6 +32,9 @@ public class Usuario implements Serializable {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(name = "password", nullable = false, length = 255)
     private String password;
+
+    @Column(name = "rol", nullable = false, length = 30)
+    private String rol = ROL_CLIENTE;
 
     @Column(name = "fecha_registro", nullable = false)
     private LocalDate fechaRegistro;
@@ -43,6 +50,9 @@ public class Usuario implements Serializable {
     protected void onCreate() {
         if (fechaRegistro == null) {
             fechaRegistro = LocalDate.now();
+        }
+        if (rol == null || rol.isBlank()) {
+            rol = ROL_CLIENTE;
         }
     }
 }
