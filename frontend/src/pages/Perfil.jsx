@@ -1,5 +1,5 @@
-﻿import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
 const API = "/api";
 
@@ -93,9 +93,12 @@ function Area({ label, value, onChange, placeholder }) {
 
 export default function Perfil() {
   const navigate = useNavigate();
+  const { usuarioId: paramUsuarioId } = useParams();
 
   const usuario = useMemo(() => obtenerUsuario(), []);
-  const usuarioId = usuario?.id;
+  const esPerfilPropio = !paramUsuarioId || (usuario && String(usuario.id) === String(paramUsuarioId));
+  const usuarioId = paramUsuarioId ? Number(paramUsuarioId) : usuario?.id;
+  const [usuarioObjetivo, setUsuarioObjetivo] = useState(null);
 
   const [perfil, setPerfil] = useState(perfilInicial);
   const [perfilId, setPerfilId] = useState(null);
@@ -210,6 +213,15 @@ export default function Perfil() {
     setError("");
 
     try {
+      if (!esPerfilPropio && usuarioId) {
+        try {
+          const uData = await request(`${API}/usuarios/${usuarioId}`);
+          if (uData) setUsuarioObjetivo(uData);
+        } catch (e) {
+          console.warn('No se pudo obtener información del usuario:', e);
+        }
+      }
+
       const data = await request(`${API}/perfiles/usuario/${usuarioId}`);
 
       if (data) {
@@ -415,7 +427,12 @@ export default function Perfil() {
     );
   }, [perfil]);
 
-  const iniciales = nombreVisible(usuario)
+  const usuarioAMostrar = esPerfilPropio ? usuario : (usuarioObjetivo || usuario);
+  const nombreAMostrar = esPerfilPropio
+    ? nombreVisible(usuario)
+    : (usuarioObjetivo?.nombre || (perfil.oficio ? `Especialista en ${perfil.oficio}` : "Profesional"));
+
+  const iniciales = nombreAMostrar
     .split(" ")
     .filter(Boolean)
     .slice(0, 2)
@@ -1180,13 +1197,13 @@ export default function Perfil() {
 
           <div className="hero-main">
             <Avatar
-              nombre={nombreVisible(usuario)}
+              nombre={nombreAMostrar}
               foto={perfil.fotoPerfil}
               grande
             />
 
             <div>
-              <h1>{nombreVisible(usuario)}</h1>
+              <h1>{nombreAMostrar}</h1>
 
               <div className="hero-oficio">
                 {texto(perfil.oficio, "Profesional independiente")}
@@ -1194,7 +1211,7 @@ export default function Perfil() {
 
               <div className="hero-meta">
                 <span className="meta-pill">
-                  ✉ {texto(usuario?.email)}
+                  ✉ {texto(usuarioAMostrar?.email, "Contacto disponible por chat")}
                 </span>
 
                 <span className="meta-pill">
@@ -1212,26 +1229,41 @@ export default function Perfil() {
             </div>
 
             <div className="hero-actions">
-              <button
-                className="btn btn-gold"
-                onClick={() => setEditando(true)}
-              >
-                ✎ Editar perfil
-              </button>
+              {esPerfilPropio ? (
+                <button
+                  className="btn btn-gold"
+                  onClick={() => setEditando(true)}
+                >
+                  ✎ Editar perfil
+                </button>
+              ) : (
+                <>
+                  <button
+                    className="btn btn-gold"
+                    onClick={() => {
+                      const receptor = nombreAMostrar;
+                      navigate("/mensajes", { state: { receptor } });
+                    }}
+                  >
+                    💬 Enviar Mensaje
+                  </button>
 
-              <button
-                className="btn btn-light"
-                onClick={() => setMensaje("La función de contacto quedará conectada al módulo de Mensajes.")}
-              >
-                ✉ Contactar
-              </button>
-
-              <button
-                className="btn btn-outline"
-                onClick={() => setMensaje("La contratación quedará vinculada al módulo de servicios.")}
-              >
-                Contratar
-              </button>
+                  <button
+                    className="btn btn-light"
+                    onClick={() => {
+                      const receptor = nombreAMostrar;
+                      navigate("/mensajes", {
+                        state: {
+                          receptor,
+                          mensajeInicial: `Hola ${receptor}, vi tu perfil en la plataforma y quisiera solicitarte un presupuesto para tus servicios de ${perfil.oficio || "oficios"}.`
+                        }
+                      });
+                    }}
+                  >
+                    🤝 Solicitar Presupuesto
+                  </button>
+                </>
+              )}
             </div>
           </div>
 

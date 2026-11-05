@@ -25,6 +25,15 @@ public class UsuarioControlador {
         return ResponseEntity.ok(usuarioServicio.listarTodos());
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<Usuario> obtenerPorId(@PathVariable Long id) {
+        Usuario usuario = usuarioServicio.buscarPorId(id);
+        if (usuario == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(usuario);
+    }
+
     @PostMapping
     public ResponseEntity<String> guardar(@RequestBody Usuario usuario) {
         Usuario nuevoUsuario = usuarioServicio.registrarUsuario(usuario);
