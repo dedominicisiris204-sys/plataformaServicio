@@ -1,88 +1,40 @@
 package com.plataforma.plataforma_servicios.controlador;
 
 import com.plataforma.plataforma_servicios.entidad.Perfil;
-import com.plataforma.plataforma_servicios.entidad.Usuario;
-import com.plataforma.plataforma_servicios.repositorio.PerfilRepository;
 import com.plataforma.plataforma_servicios.repositorio.UsuarioRepository;
-import org.springframework.http.HttpStatus;
+import com.plataforma.plataforma_servicios.servicio.PerfilServicio;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/perfiles")
-@CrossOrigin(origins = "*")
 public class PerfilController {
+    private final PerfilServicio perfilServicio;
+    private final UsuarioRepository usuarios;
 
-    private final PerfilRepository perfilRepository;
-    private final UsuarioRepository usuarioRepository;
-
-    public PerfilController(
-            PerfilRepository perfilRepository,
-            UsuarioRepository usuarioRepository) {
-        this.perfilRepository = perfilRepository;
-        this.usuarioRepository = usuarioRepository;
+    public PerfilController(PerfilServicio perfilServicio, UsuarioRepository usuarios) {
+        this.perfilServicio = perfilServicio;
+        this.usuarios = usuarios;
     }
 
     @GetMapping("/usuario/{usuarioId}")
-    public ResponseEntity<?> obtenerPorUsuario(
-            @PathVariable Long usuarioId) {
-
-        Optional<Usuario> usuario = usuarioRepository.findById(usuarioId);
-
-        if (usuario.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        return perfilRepository.findByUsuarioId(usuarioId)
-                .<ResponseEntity<?>>map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.NO_CONTENT).build());
+    public ResponseEntity<?> obtenerPorUsuario(@PathVariable Long usuarioId) {
+        return perfilServicio.porUsuario(usuarioId).<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     @PutMapping("/usuario/{usuarioId}")
-    public ResponseEntity<?> guardarPorUsuario(
-            @PathVariable Long usuarioId,
-            @RequestBody Perfil datos) {
-
-        Optional<Usuario> usuarioOptional =
-                usuarioRepository.findById(usuarioId);
-
-        if (usuarioOptional.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        Usuario usuario = usuarioOptional.get();
-
-        Perfil perfil = perfilRepository
-                .findByUsuarioId(usuarioId)
-                .orElseGet(Perfil::new);
-
-        perfil.setUsuario(usuario);
-        perfil.setFotoPerfil(datos.getFotoPerfil());
-        perfil.setOficio(datos.getOficio());
-        perfil.setDescripcion(datos.getDescripcion());
-        perfil.setServicios(datos.getServicios());
-        perfil.setExperiencia(datos.getExperiencia());
-        perfil.setEstudios(datos.getEstudios());
-        perfil.setHabilidades(datos.getHabilidades());
-        perfil.setZonaTrabajo(datos.getZonaTrabajo());
-        perfil.setHorarios(datos.getHorarios());
-
-        if (perfil.getCalificacionPromedio() == null) {
-            perfil.setCalificacionPromedio(0.0);
-        }
-
-        Perfil guardado = perfilRepository.save(perfil);
-
-        return ResponseEntity.ok(guardado);
+    public ResponseEntity<Perfil> guardarPorUsuario(@PathVariable Long usuarioId, @RequestBody Perfil datos, Authentication auth) {
+        var actual = usuarios.findByEmailIgnoreCase(auth.getName())
+                .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("La sesión ya no es válida."));
+        boolean admin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROL_ADMIN"));
+        if (!admin && !actual.getId().equals(usuarioId)) throw new org.springframework.security.access.AccessDeniedException("No podés editar este perfil.");
+        return ResponseEntity.ok(perfilServicio.guardar(usuarioId, datos));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> obtenerPorId(@PathVariable Long id) {
-
-        return perfilRepository.findById(id)
-                .<ResponseEntity<?>>map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        return perfilServicio.porId(id).<ResponseEntity<?>>map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 }

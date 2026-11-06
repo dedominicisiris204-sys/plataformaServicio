@@ -6,9 +6,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(
     name = "intereses",
-    uniqueConstraints = @UniqueConstraint(
-        columnNames = {"publicacion_id", "usuario"}
-    )
+    uniqueConstraints = @UniqueConstraint(columnNames = {"publicacion_id", "usuario_id"})
 )
 public class Interes {
 
@@ -21,6 +19,9 @@ public class Interes {
 
     @Column(nullable = false, length = 150)
     private String usuario;
+
+    @Column(name = "usuario_id")
+    private Long usuarioId;
 
     @Column(nullable = false)
     private LocalDateTime fecha;
@@ -52,6 +53,9 @@ public class Interes {
     public void setUsuario(String usuario) {
         this.usuario = usuario;
     }
+
+    public Long getUsuarioId() { return usuarioId; }
+    public void setUsuarioId(Long usuarioId) { this.usuarioId = usuarioId; }
 
     public LocalDateTime getFecha() {
         return fecha;

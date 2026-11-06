@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface PortafolioRepository extends JpaRepository<Portafolio, Long> {
     List<Portafolio> findByPerfilIdPerfilOrderByIdDesc(Long perfilId);
+    void deleteByPerfilIdPerfil(Long perfilId);
 }

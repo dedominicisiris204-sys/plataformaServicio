@@ -1,40 +1,44 @@
-import { useState, useEffect, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import { apiFetch, responseMessage } from "../apiFetch";
+import { useToast } from "../hooks/useToast";
 
 const API = "/api";
 
 export default function Usuarios() {
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [usuarios, setUsuarios] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [filtroRol, setFiltroRol] = useState("TODOS");
-  const [usuarioActual, setUsuarioActual] = useState(null);
+  const [usuarioActual, setUsuarioActual] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("usuario") || "null"); }
+    catch { localStorage.removeItem("usuario"); localStorage.removeItem("token"); return null; }
+  });
+  const [pagina, setPagina] = useState(0);
+  const [totalPaginas, setTotalPaginas] = useState(0);
+  const [tamanoPagina, setTamanoPagina] = useState(20);
+  const [confirmarBaja, setConfirmarBaja] = useState(null);
 
-  useEffect(() => {
-    try {
-      const guardado = localStorage.getItem("usuario");
-      if (guardado) setUsuarioActual(JSON.parse(guardado));
-    } catch {
-      localStorage.removeItem("usuario");
-    }
-    cargarUsuarios();
-  }, []);
-
-  async function cargarUsuarios() {
+  const cargarUsuarios = useCallback(async (page = pagina, q = busqueda, size = tamanoPagina) => {
     setCargando(true);
     setError("");
     try {
-      const respuesta = await fetch(`${API}/usuarios`);
+      const params = new URLSearchParams({ page: String(page), size: String(size) });
+      if (q.trim()) params.set("q", q.trim());
+      const respuesta = await apiFetch(`${API}/usuarios?${params}`);
       if (!respuesta.ok) {
-        throw new Error(`Error HTTP ${respuesta.status}`);
+        throw new Error(await responseMessage(respuesta, `Error HTTP ${respuesta.status}`));
       }
       const data = await respuesta.json();
-      setUsuarios(Array.isArray(data) ? data : []);
+      setUsuarios(Array.isArray(data) ? data : data.content || []);
+      setPagina(data.number ?? page);
+      setTotalPaginas(data.totalPages ?? 1);
     } catch (e) {
       console.error("Error al cargar usuarios:", e);
       setError("No pudimos conectar con el servidor para obtener los usuarios.");
@@ -42,12 +46,30 @@ export default function Usuarios() {
     } finally {
       setCargando(false);
     }
-  }
+  }, [pagina, busqueda, tamanoPagina]);
+
+  useEffect(() => { const timer = setTimeout(() => cargarUsuarios(pagina, busqueda, tamanoPagina), 250); return () => clearTimeout(timer); }, [cargarUsuarios, pagina, busqueda, tamanoPagina]);
 
   const cerrarSesion = () => {
     localStorage.removeItem("usuario");
+    localStorage.removeItem("token");
     setUsuarioActual(null);
   };
+
+  async function eliminarUsuario() {
+    const objetivo = confirmarBaja;
+    if (!objetivo) return;
+    try {
+      const r = await apiFetch(`${API}/usuarios/${objetivo.id}`, { method: "DELETE" });
+      if (!r.ok) throw new Error(await responseMessage(r));
+      toast.success("La cuenta se eliminó correctamente.");
+      setConfirmarBaja(null);
+      if (String(objetivo.id) === String(usuarioActual?.id)) {
+        localStorage.removeItem("usuario"); localStorage.removeItem("token"); navigate("/"); return;
+      }
+      await cargarUsuarios();
+    } catch (e) { toast.error(e.message); }
+  }
 
   const usuariosFiltrados = useMemo(() => {
     const q = busqueda.toLowerCase().trim();
@@ -74,11 +96,11 @@ export default function Usuarios() {
             <span className="eyebrow">ADMINISTRACIÓN & COMUNIDAD</span>
             <h1 style={{ margin: "6px 0", fontSize: "28px" }}>Directorio de Usuarios</h1>
             <p style={{ color: "var(--text-muted, #666)", margin: 0 }}>
-              Consultá y gestioná las cuentas registradas en la plataforma ({usuarios.length} en total).
+              Consultá las cuentas registradas y filtrá por nombre o correo.
             </p>
           </div>
 
-          <button className="btn-primary" onClick={cargarUsuarios} disabled={cargando}>
+          <button className="btn-primary" onClick={() => cargarUsuarios()} disabled={cargando}>
             {cargando ? "Actualizando..." : "↻ Refrescar datos"}
           </button>
         </div>
@@ -130,6 +152,9 @@ export default function Usuarios() {
               <option value="ROL_ADMIN">Administradores</option>
             </select>
           </div>
+          <label style={{ display: "flex", alignItems: "center", gap: 8 }}>Filas
+            <select value={tamanoPagina} onChange={e => { setPagina(0); setTamanoPagina(Number(e.target.value)); }}><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option></select>
+          </label>
         </div>
 
         {/* ESTADO DE CARGA */}
@@ -141,13 +166,19 @@ export default function Usuarios() {
           </div>
         )}
 
+        {!cargando && !error && <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 14, margin: 20 }}>
+          <button disabled={pagina <= 0} onClick={() => setPagina(p => Math.max(0, p - 1))}>Anterior</button>
+          <span>Página {pagina + 1} de {Math.max(totalPaginas, 1)}</span>
+          <button disabled={pagina + 1 >= totalPaginas} onClick={() => setPagina(p => p + 1)}>Siguiente</button>
+        </div>}
+
         {/* ESTADO DE ERROR */}
         {!cargando && error && (
           <div className="error-state" style={{ padding: "40px" }}>
             <div>⚠️</div>
             <h3>No pudimos cargar los usuarios</h3>
             <p>{error}</p>
-            <button className="btn-primary" onClick={cargarUsuarios}>Reintentar</button>
+            <button className="btn-primary" onClick={() => cargarUsuarios()}>Reintentar</button>
           </div>
         )}
 
@@ -240,6 +271,7 @@ export default function Usuarios() {
                             >
                               💬 Chat
                             </button>
+                            {usuarioActual?.rol === "ROL_ADMIN" && <button type="button" className="btn-danger" onClick={() => setConfirmarBaja({ id: u.id, nombre: u.nombre })}>Eliminar</button>}
                           </div>
                         </td>
                       </tr>
@@ -251,6 +283,14 @@ export default function Usuarios() {
           </div>
         )}
       </main>
+
+      {confirmarBaja && <div role="presentation" style={{ position: "fixed", inset: 0, background: "#0008", display: "grid", placeItems: "center", zIndex: 10000 }}>
+        <section role="dialog" aria-modal="true" aria-labelledby="confirmar-eliminar-usuario" className="card" style={{ maxWidth: 440, margin: 20 }}>
+          <h2 id="confirmar-eliminar-usuario">¿Eliminar a {confirmarBaja.nombre}?</h2>
+          <p>Se borrará la cuenta y sus datos asociados.</p>
+          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}><button onClick={() => setConfirmarBaja(null)}>Cancelar</button><button className="btn-danger" onClick={eliminarUsuario}>Sí, eliminar</button></div>
+        </section>
+      </div>}
 
       <Footer />
     </div>

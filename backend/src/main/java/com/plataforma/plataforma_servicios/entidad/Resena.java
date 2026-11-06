@@ -3,8 +3,9 @@ package com.plataforma.plataforma_servicios.entidad;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "resenas_contratacion")
+@Table(name = "resenas_contratacion", uniqueConstraints = @UniqueConstraint(name = "uk_resena_contratacion", columnNames = "contratacion_id"))
 public class Resena extends RegistroMarketplaceBase {
+    @Column(name = "contratacion_id")
     private Long contratacionId;
     private Long autorUsuarioId;
     private Long evaluadoUsuarioId;

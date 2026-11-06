@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useToast } from "../context/ToastContext";
+import { useToast } from "../hooks/useToast";
 
 export default function PublicacionCard({
   publicacion,
@@ -78,9 +78,9 @@ export default function PublicacionCard({
       </div>
 
       <div className="publication-body">
-        {publicacion.imagenBase64 && (
+        {(publicacion.imagenUrl || publicacion.imagenBase64) && (
           <img
-            src={publicacion.imagenBase64}
+            src={publicacion.imagenUrl || publicacion.imagenBase64}
             alt="Imagen de la publicación"
             loading="lazy"
             style={{

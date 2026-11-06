@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface ExperienciaLaboralRepository extends JpaRepository<ExperienciaLaboral, Long> {
     List<ExperienciaLaboral> findByPerfilIdPerfilOrderByIdDesc(Long perfilId);
+    void deleteByPerfilIdPerfil(Long perfilId);
 }

@@ -12,4 +12,8 @@ public interface InteresRepository extends JpaRepository<Interes, Long> {
     List<Interes> findByPublicacionId(Long publicacionId);
 
     long countByPublicacionId(Long publicacionId);
+    void deleteByUsuarioIgnoreCase(String usuario);
+    void deleteByPublicacionIdIn(java.util.Collection<Long> ids);
+    boolean existsByPublicacionIdAndUsuarioId(Long publicacionId, Long usuarioId);
+    void deleteByUsuarioId(Long usuarioId);
 }

@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface ServicioProfesionalRepository extends JpaRepository<ServicioProfesional, Long> {
     List<ServicioProfesional> findByPerfilIdPerfilOrderByIdDesc(Long perfilId);
+    void deleteByPerfilIdPerfil(Long perfilId);
 }

@@ -10,6 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 public class UsuarioServicio {
@@ -57,6 +59,9 @@ public class UsuarioServicio {
             String rol = usuario.getRol().trim().toUpperCase(Locale.ROOT);
             if (!Usuario.ROL_CLIENTE.equals(rol) && !Usuario.ROL_PROFESIONAL.equals(rol) && !Usuario.ROL_ADMIN.equals(rol)) {
                 throw new IllegalArgumentException("Rol inválido. Debe ser ROL_CLIENTE, ROL_PROFESIONAL o ROL_ADMIN.");
+            }
+            if (usuario.getId() == null && Usuario.ROL_ADMIN.equals(rol)) {
+                throw new IllegalArgumentException("No se puede crear una cuenta administradora desde el registro público.");
             }
             usuario.setRol(rol);
         }
@@ -123,8 +128,18 @@ public class UsuarioServicio {
         return usuarioRepository.findAll();
     }
 
+    public Page<Usuario> listar(Pageable pageable) { return usuarioRepository.findAll(pageable); }
+
+    public Page<Usuario> buscar(String q, Pageable pageable) {
+        return usuarioRepository.findByNombreContainingIgnoreCaseOrEmailContainingIgnoreCase(q, q, pageable);
+    }
+
     public Usuario buscarPorId(Long id) {
         return usuarioRepository.findById(id).orElse(null);
+    }
+
+    public String emailPorId(Long id) {
+        return usuarioRepository.findById(id).map(Usuario::getEmail).orElse("");
     }
 
     public void eliminarPorId(Long id) {

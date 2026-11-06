@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface HabilidadProfesionalRepository extends JpaRepository<HabilidadProfesional, Long> {
     List<HabilidadProfesional> findByPerfilIdPerfilOrderByIdDesc(Long perfilId);
+    void deleteByPerfilIdPerfil(Long perfilId);
 }

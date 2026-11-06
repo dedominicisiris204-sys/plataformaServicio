@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { obtenerConversacion, enviarMensaje } from "../conexionPersonas";
 
@@ -6,34 +6,23 @@ export default function Mensajes() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [usuario, setUsuario] = useState(null);
-  const [receptor, setReceptor] = useState(location.state?.receptor || "");
+  const [usuario] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("usuario") || "null"); }
+    catch { localStorage.removeItem("usuario"); localStorage.removeItem("token"); return null; }
+  });
+  const receptor = location.state?.receptor || "";
   const [mensajes, setMensajes] = useState([]);
   const [contenido, setContenido] = useState("");
   const [cargando, setCargando] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState("");
+  const ultimoMensajeRef = useRef(null);
 
   const emisor = usuario?.nombre || usuario?.email ||
     usuario?.username || usuario?.nombreUsuario || "";
 
   useEffect(() => {
-    try {
-      const guardado = localStorage.getItem("usuario");
-      if (guardado) setUsuario(JSON.parse(guardado));
-    } catch {
-      localStorage.removeItem("usuario");
-      setError("No se pudo leer la sesión. Iniciá sesión nuevamente.");
-    }
-  }, []);
-
-  useEffect(() => {
-    setReceptor(location.state?.receptor || "");
-  }, [location.state]);
-
-  useEffect(() => {
     if (!emisor || !receptor || emisor === receptor) {
-      setMensajes([]);
       return;
     }
 
@@ -60,6 +49,21 @@ export default function Mensajes() {
     cargar();
     return () => { cancelado = true; };
   }, [emisor, receptor]);
+
+  useEffect(() => {
+    if (!emisor || !receptor || emisor === receptor) return undefined;
+    let activo = true;
+    const consultar = async () => {
+      try {
+        const resultado = await obtenerConversacion(emisor, receptor);
+        if (activo) setMensajes(Array.isArray(resultado) ? resultado : []);
+      } catch (e) { if (activo) console.error("No se pudo actualizar la conversación:", e); }
+    };
+    const timer = setInterval(consultar, 3000);
+    return () => { activo = false; clearInterval(timer); };
+  }, [emisor, receptor]);
+
+  useEffect(() => { ultimoMensajeRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [mensajes]);
 
   async function enviar(e) {
     e.preventDefault();
@@ -137,6 +141,7 @@ export default function Mensajes() {
                 )}
               </article>
             ))}
+            <div ref={ultimoMensajeRef} />
           </section>
 
           <form onSubmit={enviar} style={{ display: "flex", gap: 8 }}>

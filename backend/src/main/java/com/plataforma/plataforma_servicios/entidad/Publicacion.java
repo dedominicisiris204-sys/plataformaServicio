@@ -16,6 +16,9 @@ public class Publicacion {
     @Column(nullable = false, length = 150)
     private String autor;
 
+    @Column(name = "usuario_id")
+    private Long usuarioId;
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String contenido;
 
@@ -42,8 +45,8 @@ public class Publicacion {
     @Column(nullable = false)
     private int comentarios = 0;
 
-    @Column(name = "imagen_base64", columnDefinition = "LONGTEXT")
-    private String imagenBase64;
+    @Column(name = "imagen_url", length = 500)
+    private String imagenUrl;
 
     public Publicacion() {
         this.fecha = LocalDateTime.now();
@@ -64,6 +67,9 @@ public class Publicacion {
     public void setAutor(String autor) {
         this.autor = autor;
     }
+
+    public Long getUsuarioId() { return usuarioId; }
+    public void setUsuarioId(Long usuarioId) { this.usuarioId = usuarioId; }
 
     public String getContenido() {
         return contenido;
@@ -121,11 +127,11 @@ public class Publicacion {
         this.comentarios = comentarios;
     }
 
-    public String getImagenBase64() {
-        return imagenBase64;
+    public String getImagenUrl() {
+        return imagenUrl;
     }
 
-    public void setImagenBase64(String imagenBase64) {
-        this.imagenBase64 = imagenBase64;
+    public void setImagenUrl(String imagenUrl) {
+        this.imagenUrl = imagenUrl;
     }
 }

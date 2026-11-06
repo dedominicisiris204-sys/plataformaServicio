@@ -1,17 +1,23 @@
+import { apiFetch } from "./apiFetch";
 const API = "/api";
 
-export async function obtenerPublicaciones() {
-    const respuesta = await fetch(`${API}/publicaciones`);
+export async function obtenerPublicaciones({ page = 0, size = 12, categoria, ubicacion, q } = {}) {
+    const params = new URLSearchParams({ page: String(page), size: String(size) });
+    if (categoria && categoria !== "Todos") params.set("categoria", categoria);
+    if (ubicacion && ubicacion !== "Todas") params.set("ubicacion", ubicacion);
+    if (q?.trim()) params.set("q", q.trim());
+    const respuesta = await apiFetch(`${API}/publicaciones/buscar?${params}`);
 
     if (!respuesta.ok) {
         throw new Error(`Error obteniendo publicaciones: ${respuesta.status}`);
     }
 
-    return await respuesta.json();
+    const pagina = await respuesta.json();
+    return Array.isArray(pagina) ? { content: pagina, last: true, number: 0 } : pagina;
 }
 
 export async function crearPublicacion(publicacion) {
-    const respuesta = await fetch(`${API}/publicaciones`, {
+    const respuesta = await apiFetch(`${API}/publicaciones`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
@@ -28,7 +34,7 @@ export async function crearPublicacion(publicacion) {
 }
 
 export async function marcarInteres(publicacionId, usuario) {
-    const respuesta = await fetch(`${API}/intereses`, {
+    const respuesta = await apiFetch(`${API}/intereses`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
@@ -49,7 +55,7 @@ export async function marcarInteres(publicacionId, usuario) {
 }
 
 export async function obtenerInteresados(publicacionId) {
-    const respuesta = await fetch(
+    const respuesta = await apiFetch(
         `${API}/intereses/publicacion/${publicacionId}`
     );
 
@@ -61,7 +67,7 @@ export async function obtenerInteresados(publicacionId) {
 }
 
 export async function obtenerCantidadInteresados(publicacionId) {
-    const respuesta = await fetch(
+    const respuesta = await apiFetch(
         `${API}/intereses/publicacion/${publicacionId}/cantidad`
     );
 
@@ -73,7 +79,7 @@ export async function obtenerCantidadInteresados(publicacionId) {
 }
 
 export async function obtenerComentarios(publicacionId) {
-    const respuesta = await fetch(
+    const respuesta = await apiFetch(
         `${API}/comentarios/publicacion/${publicacionId}`
     );
 
@@ -85,7 +91,7 @@ export async function obtenerComentarios(publicacionId) {
 }
 
 export async function crearComentario(publicacionId, autor, contenido) {
-    const respuesta = await fetch(`${API}/comentarios`, {
+    const respuesta = await apiFetch(`${API}/comentarios`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
@@ -112,9 +118,7 @@ export async function obtenerConversacion(emisor, receptor) {
         receptor
     });
 
-    const respuesta = await fetch(
-        `${API}/mensajes/conversacion?${parametros}`
-    );
+    const respuesta = await apiFetch(`${API}/mensajes/conversacion?${parametros}`);
 
     if (!respuesta.ok) {
         throw new Error(`Error HTTP ${respuesta.status}`);
@@ -124,7 +128,7 @@ export async function obtenerConversacion(emisor, receptor) {
 }
 
 export async function enviarMensaje(emisor, receptor, contenido) {
-    const respuesta = await fetch(`${API}/mensajes`, {
+    const respuesta = await apiFetch(`${API}/mensajes`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
@@ -143,4 +147,13 @@ export async function enviarMensaje(emisor, receptor, contenido) {
     }
 
     return JSON.parse(texto);
+}
+
+export async function subirImagen(archivo) {
+    const form = new FormData();
+    form.append("archivo", archivo);
+    const respuesta = await apiFetch(`${API}/archivos/subir`, { method: "POST", body: form });
+    if (!respuesta.ok) throw new Error(await respuesta.text() || `Error HTTP ${respuesta.status}`);
+    const { url } = await respuesta.json();
+    return url;
 }

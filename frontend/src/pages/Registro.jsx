@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import BotonVolver from "../components/BotonVolver";
+import { responseMessage } from "../apiFetch";
 
 const API = "/api";
 
@@ -22,6 +23,11 @@ export default function Registro() {
 
     if (!nombre || !email || !password) {
       setError("Completá todos los campos.");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError("Ingresá un correo electrónico válido.");
       return;
     }
 
@@ -53,8 +59,7 @@ export default function Registro() {
       }
 
       if (!response.ok) {
-        const detalle = await response.text();
-        throw new Error(detalle || `Error HTTP ${response.status}`);
+        throw new Error(await responseMessage(response, `Error HTTP ${response.status}`));
       }
 
       setExito("¡Cuenta creada correctamente! Ahora iniciá sesión.");
@@ -105,6 +110,8 @@ export default function Registro() {
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               autoComplete="name"
+              required
+              maxLength={100}
             />
 
             <label>Tipo de cuenta</label>
@@ -131,6 +138,8 @@ export default function Registro() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
+              required
+              maxLength={100}
             />
 
             <label>Contraseña</label>
@@ -140,6 +149,8 @@ export default function Registro() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="new-password"
+              required
+              minLength={6}
             />
 
             <button

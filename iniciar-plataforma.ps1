@@ -1,22 +1,27 @@
 ﻿$ErrorActionPreference = "Stop"
 
-$raiz = "C:\Users\Admin\Desktop\cosas de iris\plataformaServicio"
+$raiz = $PSScriptRoot
 $backend = Join-Path $raiz "backend"
 $frontend = Join-Path $raiz "frontend"
+$configuracion = Join-Path $backend "src\main\resources\application.properties"
+$ejemploConfiguracion = Join-Path $backend "src\main\resources\application.properties.example"
+if (-not (Test-Path $configuracion)) { Copy-Item -LiteralPath $ejemploConfiguracion -Destination $configuracion }
 
 Write-Host "`n========================================" -ForegroundColor Cyan
 Write-Host "  PLATAFORMA DE SERVICIOS Y OFICIOS" -ForegroundColor Cyan
 Write-Host "========================================`n" -ForegroundColor Cyan
 
-# 1. Comprobar y arrancar MySQL
+# 1. Comprobar MySQL o MariaDB. Si no hay un servicio conocido, aceptar una instancia ya iniciada (p. ej. XAMPP).
+$puerto = Get-NetTCPConnection -State Listen -LocalPort 3306 -ErrorAction SilentlyContinue
 $servicio = Get-Service -Name "MySQL80" -ErrorAction SilentlyContinue
-if (-not $servicio) {
-    Write-Host "No se encontró el servicio MySQL80." -ForegroundColor Red
+if (-not $servicio) { $servicio = Get-Service -Name "MariaDB" -ErrorAction SilentlyContinue }
+if (-not $puerto -and -not $servicio) {
+    Write-Host "No se detectó MySQL/MariaDB. Iniciá la base en XAMPP o instalá el servicio MySQL80/MariaDB." -ForegroundColor Red
     Read-Host "Presiona Enter para salir"
     exit 1
 }
 
-if ($servicio.Status -ne "Running") {
+if (-not $puerto -and $servicio.Status -ne "Running") {
     try {
         Write-Host "Iniciando MySQL80..." -ForegroundColor Yellow
         Start-Service -Name "MySQL80"
@@ -29,7 +34,7 @@ if ($servicio.Status -ne "Running") {
     }
 }
 
-$mysqlListo = $false
+$mysqlListo = [bool]$puerto
 for ($i = 0; $i -lt 30; $i++) {
     $puerto = Get-NetTCPConnection -State Listen -LocalPort 3306 -ErrorAction SilentlyContinue
     if ($puerto) {
@@ -46,7 +51,13 @@ if (-not $mysqlListo) {
 }
 Write-Host "MySQL está disponible en el puerto 3306." -ForegroundColor Green
 
-# 2. Iniciar React si todavía no está ejecutándose
+# 2. Instalar paquetes del frontend la primera vez e iniciar Vite si todavía no está ejecutándose
+$env:APP_JWT_SECRET = ([guid]::NewGuid().ToString("N") + [guid]::NewGuid().ToString("N"))
+if (-not (Test-Path (Join-Path $frontend "node_modules"))) {
+    Write-Host "Instalando dependencias del frontend..." -ForegroundColor Yellow
+    Push-Location -LiteralPath $frontend
+    try { npm install } finally { Pop-Location }
+}
 $frontendActivo = Get-NetTCPConnection -State Listen -LocalPort 5173 -ErrorAction SilentlyContinue
 if (-not $frontendActivo) {
     Write-Host "Iniciando React/Vite en otra ventana..." -ForegroundColor Yellow
@@ -82,6 +93,7 @@ try {
 
 $env:SPRING_DATASOURCE_URL = "jdbc:mysql://localhost:3306/plataforma_servicios?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
 $env:SPRING_DATASOURCE_USERNAME = "root"
+$env:SPRING_JPA_HIBERNATE_DDL_AUTO = "update"
 
 try {
     Set-Location -LiteralPath $backend

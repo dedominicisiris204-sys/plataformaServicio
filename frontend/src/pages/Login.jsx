@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import BotonVolver from "../components/BotonVolver";
+import { responseMessage } from "../apiFetch";
 
 const API = "/api";
 
@@ -38,21 +39,22 @@ export default function Login() {
       }
 
       if (!response.ok) {
-        throw new Error("Error al iniciar sesión");
+        throw new Error(await responseMessage(response, "Error al iniciar sesión"));
       }
 
       const textoLogin = await response.text();
-      let usuario;
+      let respuestaLogin;
 
       try {
-        usuario = JSON.parse(textoLogin);
+        respuestaLogin = JSON.parse(textoLogin);
       } catch {
         throw new Error("El servidor devolvió una respuesta de inicio de sesión no válida.");
       }
 
+      const usuario = respuestaLogin.usuario || respuestaLogin;
+      if (respuestaLogin.token) localStorage.setItem("token", respuestaLogin.token);
       localStorage.setItem("usuario", JSON.stringify(usuario));
       navigate("/");
-      window.location.reload();
     } catch (err) {
       console.error(err);
       setError("No pudimos conectar con el servidor. Verificá que Spring Boot esté funcionando.");
@@ -94,6 +96,8 @@ export default function Login() {
               placeholder="ejemplo@correo.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              required
+              maxLength={100}
               autoComplete="email"
             />
 
@@ -103,6 +107,7 @@ export default function Login() {
               placeholder="Tu contraseña"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              required
               autoComplete="current-password"
             />
 

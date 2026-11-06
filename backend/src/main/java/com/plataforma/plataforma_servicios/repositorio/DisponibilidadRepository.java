@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface DisponibilidadRepository extends JpaRepository<Disponibilidad, Long> {
     List<Disponibilidad> findByPerfil_IdPerfilOrderByIdAsc(Long perfilId);
+    void deleteByPerfil_IdPerfil(Long perfilId);
 }

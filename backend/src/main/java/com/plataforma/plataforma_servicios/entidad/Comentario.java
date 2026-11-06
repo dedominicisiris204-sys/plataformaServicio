@@ -17,6 +17,9 @@ public class Comentario {
     @Column(nullable = false, length = 150)
     private String autor;
 
+    @Column(name = "usuario_id")
+    private Long usuarioId;
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String contenido;
 
@@ -50,6 +53,9 @@ public class Comentario {
     public void setAutor(String autor) {
         this.autor = autor;
     }
+
+    public Long getUsuarioId() { return usuarioId; }
+    public void setUsuarioId(Long usuarioId) { this.usuarioId = usuarioId; }
 
     public String getContenido() {
         return contenido;

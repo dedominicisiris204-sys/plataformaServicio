@@ -1,15 +1,16 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import PublicacionCard from "../components/PublicacionCard";
-import { useToast } from "../context/ToastContext";
+import { useToast } from "../hooks/useToast";
 import {
   obtenerPublicaciones,
   crearPublicacion,
   marcarInteres,
   obtenerComentarios,
-  crearComentario
+  crearComentario,
+  subirImagen
 } from "../conexionPersonas";
 
 const categorias = [
@@ -31,18 +32,24 @@ export default function Inicio() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
 
-  const [usuario, setUsuario] = useState(null);
+  const [usuario, setUsuario] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("usuario") || "null"); }
+    catch { localStorage.removeItem("usuario"); localStorage.removeItem("token"); return null; }
+  });
   const identidadUsuario = usuario?.nombre || usuario?.email || usuario?.username || usuario?.nombreUsuario;
 
   const [busqueda, setBusqueda] = useState("");
   const [categoriaActiva, setCategoriaActiva] = useState("Todos");
   const [zonaFiltro, setZonaFiltro] = useState("Todas");
+  const [paginaActual, setPaginaActual] = useState(0);
+  const [hayMas, setHayMas] = useState(false);
+  const [buscandoImagen, setBuscandoImagen] = useState(false);
 
   // Creación de publicaciones
   const [contenidoNuevo, setContenidoNuevo] = useState("");
   const [tipoNuevo, setTipoNuevo] = useState("Servicio ofrecido");
   const [ubicacionNueva, setUbicacionNueva] = useState("");
-  const [imagenBase64, setImagenBase64] = useState("");
+  const [imagenUrl, setImagenUrl] = useState("");
   const [guardandoPublicacion, setGuardandoPublicacion] = useState(false);
   const [errorFormulario, setErrorFormulario] = useState("");
   const [mensajeFormulario, setMensajeFormulario] = useState("");
@@ -55,24 +62,15 @@ export default function Inicio() {
   const [procesandoInteres, setProcesandoInteres] = useState({});
   const [procesandoComentario, setProcesandoComentario] = useState({});
 
-  useEffect(() => {
-    const guardado = localStorage.getItem("usuario");
-    if (guardado) {
-      try {
-        setUsuario(JSON.parse(guardado));
-      } catch {
-        localStorage.removeItem("usuario");
-      }
-    }
-    cargar();
-  }, []);
-
-  async function cargar() {
+  const cargar = useCallback(async ({ pagina = 0, anexar = false } = {}) => {
     try {
       setCargando(true);
       setError("");
-      const data = await obtenerPublicaciones();
-      setPublicaciones(Array.isArray(data) ? data : []);
+      const data = await obtenerPublicaciones({ page: pagina, size: 12, categoria: categoriaActiva, ubicacion: zonaFiltro, q: busqueda });
+      const elementos = Array.isArray(data?.content) ? data.content : [];
+      setPublicaciones(actuales => anexar ? [...actuales, ...elementos] : elementos);
+      setPaginaActual(data?.number ?? pagina);
+      setHayMas(!data?.last);
     } catch (e) {
       console.error(e);
       setError("No pudimos conectar con las publicaciones del servidor.");
@@ -80,10 +78,16 @@ export default function Inicio() {
     } finally {
       setCargando(false);
     }
-  }
+  }, [categoriaActiva, zonaFiltro, busqueda]);
+
+  useEffect(() => {
+    const temporizador = setTimeout(() => { cargar({ pagina: 0 }); }, 300);
+    return () => clearTimeout(temporizador);
+  }, [busqueda, categoriaActiva, zonaFiltro, cargar]);
 
   const cerrarSesion = () => {
     localStorage.removeItem("usuario");
+    localStorage.removeItem("token");
     setUsuario(null);
     toast.info("Sesión cerrada correctamente.");
   };
@@ -186,16 +190,17 @@ export default function Inicio() {
     try {
       await crearPublicacion({
         autor,
+        usuarioId: usuario?.id,
         contenido,
         tipo: tipoNuevo,
         ubicacion: ubicacionNueva.trim(),
-        imagenBase64: imagenBase64 || null
+        imagenUrl: imagenUrl || null
       });
 
       setContenidoNuevo("");
       setTipoNuevo("Servicio ofrecido");
       setUbicacionNueva("");
-      setImagenBase64("");
+      setImagenUrl("");
       setMensajeFormulario("¡Publicación guardada correctamente!");
       toast.success("¡Tu publicación ya está visible para la comunidad!");
       await cargar();
@@ -213,35 +218,7 @@ export default function Inicio() {
     document.getElementById("publicaciones")?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const publicacionesFiltradas = useMemo(() => {
-    const texto = busqueda.toLowerCase().trim();
-    const zona = zonaFiltro.toLowerCase().trim();
-
-    return publicaciones.filter((p) => {
-      const contenido = (p.contenido || "").toLowerCase();
-      const autor = (p.autor || "").toLowerCase();
-      const tipo = (p.tipo || "").toLowerCase();
-      const ubicacion = (p.ubicacion || "").toLowerCase();
-
-      const coincideBusqueda =
-        !texto ||
-        contenido.includes(texto) ||
-        autor.includes(texto) ||
-        tipo.includes(texto) ||
-        ubicacion.includes(texto);
-
-      const coincideCategoria =
-        categoriaActiva === "Todos" ||
-        tipo.includes(categoriaActiva.toLowerCase());
-
-      const coincideZona =
-        zona === "todas" ||
-        !zona ||
-        ubicacion.includes(zona);
-
-      return coincideBusqueda && coincideCategoria && coincideZona;
-    });
-  }, [publicaciones, busqueda, categoriaActiva, zonaFiltro]);
+  const publicacionesFiltradas = useMemo(() => publicaciones, [publicaciones]);
 
   return (
     <div className="app">
@@ -357,38 +334,35 @@ export default function Inicio() {
                 style={{ display: "block", width: "100%", boxSizing: "border-box", margin: "8px 0 14px", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color, #ccc)" }}
               />
 
-              <label htmlFor="imagen-publicacion">Fotografía (opcional, máx. 2 MB)</label>
+              <label htmlFor="imagen-publicacion">Fotografía (JPG, PNG o WEBP; máx. 5 MB)</label>
               <input
                 id="imagen-publicacion"
                 type="file"
                 accept="image/*"
-                disabled={guardandoPublicacion}
+                disabled={guardandoPublicacion || buscandoImagen}
                 style={{ display: "block", margin: "8px 0 14px" }}
                 onChange={(e) => {
                   const archivo = e.target.files?.[0];
-                  setImagenBase64("");
+                  setImagenUrl("");
                   setErrorFormulario("");
                   if (!archivo) return;
-                  if (!archivo.type.startsWith("image/")) {
-                    setErrorFormulario("Seleccioná un archivo de imagen.");
+                  if (!['image/jpeg', 'image/png', 'image/webp'].includes(archivo.type)) {
+                    setErrorFormulario("Seleccioná una imagen JPG, PNG o WEBP.");
                     e.target.value = "";
                     return;
                   }
-                  if (archivo.size > 2 * 1024 * 1024) {
-                    setErrorFormulario("La imagen supera el límite de 2 MB.");
+                  if (archivo.size > 5 * 1024 * 1024) {
+                    setErrorFormulario("La imagen supera el límite de 5 MB.");
                     e.target.value = "";
                     return;
                   }
-                  const lector = new FileReader();
-                  lector.onload = () => {
-                    if (typeof lector.result === "string") setImagenBase64(lector.result);
-                  };
-                  lector.readAsDataURL(archivo);
+                  setBuscandoImagen(true);
+                  subirImagen(archivo).then(setImagenUrl).catch(error => setErrorFormulario(error.message || "No se pudo subir la imagen.")).finally(() => setBuscandoImagen(false));
                 }}
               />
 
-              {imagenBase64 && (
-                <img src={imagenBase64} alt="Vista previa" style={{ display: "block", maxWidth: "100%", maxHeight: "200px", objectFit: "contain", marginBottom: "14px", borderRadius: "8px" }} />
+              {imagenUrl && (
+                <img src={imagenUrl} alt="Vista previa" style={{ display: "block", maxWidth: "100%", maxHeight: "200px", objectFit: "contain", marginBottom: "14px", borderRadius: "8px" }} />
               )}
 
               {errorFormulario && <p role="alert" style={{ color: "#b42318", margin: "8px 0" }}>{errorFormulario}</p>}
@@ -443,8 +417,8 @@ export default function Inicio() {
           ) : publicacionesFiltradas.length === 0 ? (
             <div className="empty-state">
               <div className="empty-icon">📭</div>
-              <h3>No encontramos publicaciones</h3>
-              <p>Probá cambiando los términos de búsqueda o de categoría.</p>
+              <h3>No se encontraron publicaciones con esos criterios</h3>
+              <button onClick={() => { setBusqueda(""); setCategoriaActiva("Todos"); setZonaFiltro("Todas"); }}>Restablecer filtros</button>
             </div>
           ) : (
             <div className="publication-grid">
@@ -464,7 +438,8 @@ export default function Inicio() {
                   procesandoInteres={procesandoInteres}
                   procesandoComentario={procesandoComentario}
                 />
-              ))}
+            ))}
+            {hayMas && <button className="btn-primary" onClick={() => cargar({ pagina: paginaActual + 1, anexar: true })}>Cargar más publicaciones</button>}
             </div>
           )}
         </section>

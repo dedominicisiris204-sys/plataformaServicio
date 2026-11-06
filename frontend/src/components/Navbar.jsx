@@ -1,9 +1,28 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { apiFetch } from "../apiFetch";
 
 export default function Navbar({ usuario, onCerrarSesion, zonaSeleccionada, onCambiarZona }) {
   const navigate = useNavigate();
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const [noLeidos, setNoLeidos] = useState(0);
+
+  useEffect(() => {
+    if (!usuario) return undefined;
+    let activo = true;
+    const consultar = async () => {
+      try {
+        const respuesta = await apiFetch("/api/mensajes/no-leidos");
+        if (respuesta.ok) {
+          const data = await respuesta.json();
+          if (activo) setNoLeidos(Number(data.cantidad || 0));
+        }
+      } catch { /* La próxima consulta recupera el contador. */ }
+    };
+    consultar();
+    const id = setInterval(consultar, 5000);
+    return () => { activo = false; clearInterval(id); };
+  }, [usuario]);
 
   return (
     <header className="navbar">
@@ -84,8 +103,12 @@ export default function Navbar({ usuario, onCerrarSesion, zonaSeleccionada, onCa
                       navigate("/mensajes");
                     }}
                   >
-                    💬 Mensajes
+                    💬 Mensajes {usuario && noLeidos > 0 && <span aria-label={`${noLeidos} mensajes sin leer`} className="badge">{noLeidos}</span>}
                   </button>
+
+                  <button onClick={() => { setMenuAbierto(false); navigate("/cuenta"); }}>⚙️ Mi cuenta</button>
+
+                  <button onClick={() => { setMenuAbierto(false); navigate("/solicitudes"); }}>🤝 Mis solicitudes</button>
 
                   <button
                     onClick={() => {

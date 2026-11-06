@@ -11,4 +11,11 @@ public interface MensajeRepository extends JpaRepository<Mensaje, Long> {
     List<Mensaje> findByEmisorAndReceptorOrEmisorAndReceptorOrderByFechaEnvioAsc(
             String emisor1, String receptor1, String emisor2, String receptor2
     );
+    List<Mensaje> findByReceptorIgnoreCaseAndLeidoFalse(String receptor);
+    void deleteByEmisorIgnoreCaseOrReceptorIgnoreCase(String emisor, String receptor);
+    List<Mensaje> findByEmisorUsuarioIdAndReceptorUsuarioIdOrReceptorUsuarioIdAndEmisorUsuarioIdOrderByFechaEnvioAsc(Long emisorId, Long receptorId, Long receptorId2, Long emisorId2);
+    List<Mensaje> findByReceptorUsuarioIdAndLeidoFalse(Long receptorUsuarioId);
+    long countByReceptorUsuarioIdAndLeidoFalse(Long receptorUsuarioId);
+    long countByReceptorIgnoreCaseAndLeidoFalse(String receptor);
+    void deleteByEmisorUsuarioIdOrReceptorUsuarioId(Long emisorUsuarioId, Long receptorUsuarioId);
 }

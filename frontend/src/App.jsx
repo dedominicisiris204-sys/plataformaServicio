@@ -1,11 +1,13 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ToastProvider } from "./context/ToastContext";
+import { ToastProvider } from "./context/ToastProvider.jsx";
 import Inicio from "./pages/Inicio";
 import Login from "./pages/Login";
 import Registro from "./pages/Registro";
 import Perfil from "./pages/Perfil";
 import Mensajes from "./pages/Mensajes";
 import Usuarios from "./pages/Usuarios";
+import Cuenta from "./pages/Cuenta";
+import MisSolicitudes from "./pages/MisSolicitudes";
 
 import "./styles/global.css";
 import "./styles/variables.css";
@@ -24,6 +26,8 @@ function App() {
           <Route path="/perfil/:usuarioId" element={<Perfil />} />
           <Route path="/mensajes" element={<Mensajes />} />
           <Route path="/usuarios" element={<Usuarios />} />
+          <Route path="/cuenta" element={<Cuenta />} />
+          <Route path="/solicitudes" element={<MisSolicitudes />} />
           <Route path="*" element={<Inicio />} />
         </Routes>
       </ToastProvider>

@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { apiFetch, responseMessage } from "../apiFetch";
+import { useToast } from "../hooks/useToast";
 
 const API = "/api";
 
@@ -93,6 +95,7 @@ function Area({ label, value, onChange, placeholder }) {
 
 export default function Perfil() {
   const navigate = useNavigate();
+  const toast = useToast();
   const { usuarioId: paramUsuarioId } = useParams();
 
   const usuario = useMemo(() => obtenerUsuario(), []);
@@ -118,6 +121,8 @@ export default function Perfil() {
   const [error, setError] = useState("");
 
   const [modal, setModal] = useState(null);
+  const [resenas, setResenas] = useState([]);
+  const [nuevaSolicitud, setNuevaSolicitud] = useState({ titulo: "", descripcion: "", fechaEstimada: "", ubicacion: "" });
 
   const [nuevoServicio, setNuevoServicio] = useState({
     nombre: "",
@@ -145,11 +150,6 @@ export default function Perfil() {
     descripcion: ""
   });
 
-  const [nuevaHabilidad, setNuevaHabilidad] = useState({
-    nombre: "",
-    nivel: "Intermedio"
-  });
-
   const [nuevoPortfolio, setNuevoPortfolio] = useState({
     titulo: "",
     descripcion: "",
@@ -165,17 +165,8 @@ export default function Perfil() {
     disponible: true
   });
 
-  useEffect(() => {
-    if (!usuarioId) {
-      navigate("/login");
-      return;
-    }
-
-    cargarTodo();
-  }, [usuarioId]);
-
-  const request = async (url, opciones = {}) => {
-    const respuesta = await fetch(url, {
+  const request = useCallback(async (url, opciones = {}) => {
+    const respuesta = await apiFetch(url, {
       headers: {
         "Content-Type": "application/json",
         ...(opciones.headers || {})
@@ -184,8 +175,7 @@ export default function Perfil() {
     });
 
     if (!respuesta.ok) {
-      const cuerpo = await respuesta.text().catch(() => "");
-      throw new Error(cuerpo || `Error HTTP ${respuesta.status}`);
+      throw new Error(await responseMessage(respuesta, `Error HTTP ${respuesta.status}`));
     }
 
     if (respuesta.status === 204) return null;
@@ -197,25 +187,25 @@ export default function Perfil() {
     }
 
     return respuesta.text();
-  };
+  }, []);
 
-  const cargarColeccion = async (url, setter) => {
+  const cargarColeccion = useCallback(async (url, setter) => {
     try {
       const data = await request(url);
       setter(Array.isArray(data) ? data : []);
     } catch {
       setter([]);
     }
-  };
+  }, [request]);
 
-  const cargarTodo = async () => {
+  const cargarTodo = useCallback(async () => {
     setCargando(true);
     setError("");
 
     try {
       if (!esPerfilPropio && usuarioId) {
         try {
-          const uData = await request(`${API}/usuarios/${usuarioId}`);
+          const uData = await request(`${API}/usuarios/${usuarioId}/publico`);
           if (uData) setUsuarioObjetivo(uData);
         } catch (e) {
           console.warn('No se pudo obtener información del usuario:', e);
@@ -223,6 +213,10 @@ export default function Perfil() {
       }
 
       const data = await request(`${API}/perfiles/usuario/${usuarioId}`);
+      try {
+        const listaResenas = await request(`${API}/resenas/profesional/${usuarioId}`);
+        setResenas(Array.isArray(listaResenas) ? listaResenas : []);
+      } catch { setResenas([]); }
 
       if (data) {
         setPerfil({
@@ -268,7 +262,13 @@ export default function Perfil() {
     } finally {
       setCargando(false);
     }
-  };
+  }, [cargarColeccion, esPerfilPropio, request, usuarioId]);
+
+  useEffect(() => {
+    if (!usuarioId) { navigate("/login"); return; }
+    const timer = setTimeout(() => { void cargarTodo(); }, 0);
+    return () => clearTimeout(timer);
+  }, [usuarioId, navigate, cargarTodo]);
 
   const guardarPerfil = async () => {
     setGuardando(true);
@@ -312,6 +312,33 @@ export default function Perfil() {
     } finally {
       setGuardando(false);
     }
+  };
+
+  const enviarSolicitud = async (evento) => {
+    evento.preventDefault();
+    if (!usuario) { navigate("/login"); return; }
+    try {
+      const respuesta = await apiFetch(`${API}/solicitudes`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...nuevaSolicitud, profesionalUsuarioId: usuarioId })
+      });
+      if (!respuesta.ok) throw new Error(await responseMessage(respuesta));
+      toast.success("La solicitud de presupuesto fue enviada.");
+      setModal(null);
+      navigate("/solicitudes");
+    } catch (e) { toast.error(e.message); }
+  };
+
+  const subirFotoPerfil = async (archivo) => {
+    if (!archivo) return;
+    const form = new FormData(); form.append("archivo", archivo);
+    try {
+      const respuesta = await apiFetch(`${API}/archivos/subir`, { method: "POST", body: form });
+      if (!respuesta.ok) throw new Error(await responseMessage(respuesta));
+      const data = await respuesta.json();
+      actualizar("fotoPerfil", data.url);
+      toast.success("Foto cargada. Guardá el perfil para aplicar el cambio.");
+    } catch (e) { toast.error(e.message); }
   };
 
   const agregar = async (tipo, datos, cerrar) => {
@@ -431,14 +458,6 @@ export default function Perfil() {
   const nombreAMostrar = esPerfilPropio
     ? nombreVisible(usuario)
     : (usuarioObjetivo?.nombre || (perfil.oficio ? `Especialista en ${perfil.oficio}` : "Profesional"));
-
-  const iniciales = nombreAMostrar
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((x) => x[0])
-    .join("")
-    .toUpperCase();
 
   if (cargando) {
     return (
@@ -1251,13 +1270,9 @@ export default function Perfil() {
                   <button
                     className="btn btn-light"
                     onClick={() => {
-                      const receptor = nombreAMostrar;
-                      navigate("/mensajes", {
-                        state: {
-                          receptor,
-                          mensajeInicial: `Hola ${receptor}, vi tu perfil en la plataforma y quisiera solicitarte un presupuesto para tus servicios de ${perfil.oficio || "oficios"}.`
-                        }
-                      });
+                      if (!usuario) { navigate("/login"); return; }
+                      setNuevaSolicitud({ titulo: `Presupuesto: ${perfil.oficio || "servicio profesional"}`, descripcion: "", fechaEstimada: "", ubicacion: perfil.zonaTrabajo || "" });
+                      setModal("solicitud");
                     }}
                   >
                     🤝 Solicitar Presupuesto
@@ -1468,12 +1483,12 @@ export default function Perfil() {
                   <p>Tu catálogo de servicios para clientes.</p>
                 </div>
 
-                <button
+                {esPerfilPropio && <button
                   className="btn btn-blue"
                   onClick={() => setModal("servicio")}
                 >
                   + Agregar servicio
-                </button>
+                </button>}
               </div>
 
               {servicios.length === 0 ? (
@@ -1508,7 +1523,7 @@ export default function Perfil() {
 
                         {s.modalidad && <small>Modalidad: {s.modalidad}</small>}
 
-                        {id && (
+                        {id && esPerfilPropio && (
                           <div className="item-actions">
                             <button
                               className="mini-delete"
@@ -1534,12 +1549,12 @@ export default function Perfil() {
                   <p>Construí confianza mostrando tu recorrido profesional.</p>
                 </div>
 
-                <button
+                {esPerfilPropio && <button
                   className="btn btn-blue"
                   onClick={() => setModal("experiencia")}
                 >
                   + Agregar experiencia
-                </button>
+                </button>}
               </div>
 
               {experiencias.length === 0 ? (
@@ -1573,7 +1588,7 @@ export default function Perfil() {
 
                         <p>{texto(e.descripcion)}</p>
 
-                        {id && (
+                        {id && esPerfilPropio && (
                           <button
                             className="mini-delete"
                             onClick={() => eliminar("experiencia", id)}
@@ -1594,12 +1609,12 @@ export default function Perfil() {
                     <p>Estudios, cursos y capacitación profesional.</p>
                   </div>
 
-                  <button
+                  {esPerfilPropio && <button
                     className="btn btn-blue"
                     onClick={() => setModal("formacion")}
                   >
                     + Agregar formación
-                  </button>
+                  </button>}
                 </div>
 
                 {formaciones.length === 0 ? (
@@ -1626,7 +1641,7 @@ export default function Perfil() {
 
                           <p>{texto(f.descripcion)}</p>
 
-                          {id && (
+                          {id && esPerfilPropio && (
                             <button
                               className="mini-delete"
                               onClick={() => eliminar("formacion", id)}
@@ -1651,12 +1666,12 @@ export default function Perfil() {
                   <p>Mostrá trabajos realizados y proyectos destacados.</p>
                 </div>
 
-                <button
+                {esPerfilPropio && <button
                   className="btn btn-blue"
                   onClick={() => setModal("portfolio")}
                 >
                   + Agregar trabajo
-                </button>
+                </button>}
               </div>
 
               {portafolio.length === 0 ? (
@@ -1693,7 +1708,7 @@ export default function Perfil() {
                             <small>{p.categoria}</small>
                           )}
 
-                          {id && (
+                          {id && esPerfilPropio && (
                             <div className="item-actions">
                               <button
                                 className="mini-delete"
@@ -1722,6 +1737,15 @@ export default function Perfil() {
               </div>
 
               <div className="sobre-grid">
+                <div className="card" style={{ background: "#fbfcfe" }}>
+                  <h3>Opiniones verificadas</h3>
+                  {resenas.length === 0 ? <p>Aún no hay reseñas de contrataciones completadas.</p> : resenas.map(r => (
+                    <article key={r.id} style={{ padding: "10px 0", borderBottom: "1px solid #eee" }}>
+                      <strong aria-label={`${r.puntuacion} de 5 estrellas`}>{"★".repeat(Number(r.puntuacion || 0))}{"☆".repeat(5 - Number(r.puntuacion || 0))}</strong>
+                      {r.comentario && <p>{r.comentario}</p>}
+                    </article>
+                  ))}
+                </div>
                 <div className="card" style={{ background: "#fbfcfe" }}>
                   <div style={{
                     fontSize: 48,
@@ -1789,12 +1813,9 @@ export default function Perfil() {
                   placeholder="Ej.: Cruz del Eje y alrededores"
                 />
 
-                <Campo
-                  label="Foto de perfil"
-                  value={perfil.fotoPerfil}
-                  onChange={(v) => actualizar("fotoPerfil", v)}
-                  placeholder="URL de la imagen"
-                />
+                <label className="campo"><span>Foto de perfil (JPG, PNG o WEBP; máx. 5 MB)</span>
+                  <input type="file" accept="image/jpeg,image/png,image/webp" onChange={e => subirFotoPerfil(e.target.files?.[0])} />
+                </label>
 
                 <Campo
                   label="Horarios"
@@ -1867,12 +1888,12 @@ export default function Perfil() {
                   <p>Indicá cuándo pueden encontrarte tus clientes.</p>
                 </div>
 
-                <button
+                {esPerfilPropio && <button
                   className="btn btn-blue"
                   onClick={() => setModal("disponibilidad")}
                 >
                   + Agregar horario
-                </button>
+                </button>}
               </div>
 
               {disponibilidades.length === 0 ? (
@@ -1895,7 +1916,7 @@ export default function Perfil() {
                           {d.disponible === false ? "No disponible" : "Disponible"}
                         </small>
 
-                        {id && (
+                        {id && esPerfilPropio && (
                           <div className="item-actions">
                             <button
                               className="mini-delete"
@@ -1915,6 +1936,20 @@ export default function Perfil() {
 
         </div>
       </main>
+
+      {modal === "solicitud" && (
+        <Modal titulo="Solicitar presupuesto" cerrar={() => setModal(null)}>
+          <form onSubmit={enviarSolicitud}>
+            <div className="form-grid">
+              <Campo label="Trabajo" value={nuevaSolicitud.titulo} onChange={v => setNuevaSolicitud({ ...nuevaSolicitud, titulo: v })} placeholder="Ej.: Reparación de cañería" />
+              <Campo label="Fecha estimada" value={nuevaSolicitud.fechaEstimada} onChange={v => setNuevaSolicitud({ ...nuevaSolicitud, fechaEstimada: v })} type="date" />
+              <Campo label="Ubicación" value={nuevaSolicitud.ubicacion} onChange={v => setNuevaSolicitud({ ...nuevaSolicitud, ubicacion: v })} placeholder="Ciudad o barrio" />
+              <Area label="Descripción del trabajo" value={nuevaSolicitud.descripcion} onChange={v => setNuevaSolicitud({ ...nuevaSolicitud, descripcion: v })} placeholder="Contá qué necesitás y cualquier detalle importante." />
+            </div>
+            <div className="acciones"><button type="button" className="btn btn-danger" onClick={() => setModal(null)}>Cancelar</button><button type="submit" className="btn btn-blue" disabled={!nuevaSolicitud.descripcion.trim()}>Enviar solicitud</button></div>
+          </form>
+        </Modal>
+      )}
 
       {modal === "servicio" && (
         <Modal titulo="Agregar servicio profesional" cerrar={() => setModal(null)}>
