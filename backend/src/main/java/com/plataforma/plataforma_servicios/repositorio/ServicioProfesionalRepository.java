@@ -1,0 +1,9 @@
+package com.plataforma.plataforma_servicios.repositorio;
+
+import com.plataforma.plataforma_servicios.entidad.ServicioProfesional;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.List;
+
+public interface ServicioProfesionalRepository extends JpaRepository<ServicioProfesional, Long> {
+    List<ServicioProfesional> findByPerfilIdPerfilOrderByIdDesc(Long perfilId);
+}
