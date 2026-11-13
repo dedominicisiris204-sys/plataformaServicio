@@ -1,15 +1,9 @@
+import React, { Component, useEffect, useMemo, useState } from "react";
+import { BrowserRouter, Routes, Route, Link, useNavigate } from "react-router-dom";
 import { marcarInteres, obtenerComentarios, crearComentario } from "./conexionPersonas";
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Link,
-  useNavigate
-} from "react-router-dom";
-
-import { useEffect, useMemo, useState } from "react";
 import Perfil from "./pages/Perfil";
 import Mensajes from "./pages/Mensajes";
+import Dashboard from "./pages/Dashboard";
 
 import "./styles/global.css";
 import "./styles/variables.css";
@@ -18,615 +12,160 @@ import "./styles/components.css";
 
 const API = "/api";
 
+// Categorías oficiales con iconos limpios UTF-8
 const categorias = [
-  { icon: "⚡", nombre: "Electricidad", descripcion: "Instalaciones y reparaciones" },
-  { icon: "🔧", nombre: "Plomería", descripcion: "Agua, cañerías y sanitarios" },
-  { icon: "🧱", nombre: "Albañilería", descripcion: "Obras y construcción" },
-  { icon: "🎨", nombre: "Pintura", descripcion: "Interior y exterior" },
-  { icon: "🧹", nombre: "Limpieza", descripcion: "Hogares y comercios" },
-  { icon: "🌳", nombre: "Jardinería", descripcion: "Parques y jardines" },
-  { icon: "🪚", nombre: "Carpintería", descripcion: "Muebles y madera" },
-  { icon: "🔨", nombre: "Reparaciones", descripcion: "Arreglos generales" }
+  { icon: "⚡", nombre: "Electricidad", descripcion: "Instalaciones, tableros y reparaciones" },
+  { icon: "🔧", nombre: "Plomería", descripcion: "Agua, cañerías, gas y sanitarios" },
+  { icon: "🧱", nombre: "Albañilería", descripcion: "Obras, remodelaciones y construcción" },
+  { icon: "🎨", nombre: "Pintura", descripcion: "Pintura interior, exterior y revestimientos" },
+  { icon: "🧹", nombre: "Limpieza", descripcion: "Hogares, oficinas y finales de obra" },
+  { icon: "🌳", nombre: "Jardinería", descripcion: "Parques, poda y mantenimiento verde" },
+  { icon: "🪚", nombre: "Carpintería", descripcion: "Muebles a medida, aberturas y arreglos" },
+  { icon: "🔨", nombre: "Reparaciones", descripcion: "Arreglos generales del hogar y cerrajería" }
 ];
 
+// Imágenes curadas de alta calidad para que todas las publicaciones tengan foto profesional
+const IMAGENES_CATEGORIAS = {
+  "Electricidad": "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=800&q=80",
+  "Plomería": "https://images.unsplash.com/photo-1581244277943-fe4a9c777189?auto=format&fit=crop&w=800&q=80",
+  "Albañilería": "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=800&q=80",
+  "Pintura": "https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&w=800&q=80",
+  "Limpieza": "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=800&q=80",
+  "Jardinería": "https://images.unsplash.com/photo-1557429287-b2e26467fc2b?auto=format&fit=crop&w=800&q=80",
+  "Carpintería": "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80",
+  "Reparaciones": "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80",
+  "Default": "https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=800&q=80"
+};
+
+function obtenerImagenPublicacion(pub) {
+  if (pub.imagenBase64 && pub.imagenBase64.trim()) {
+    return pub.imagenBase64;
+  }
+  const texto = `${pub.tipo || ""} ${pub.contenido || ""}`.toLowerCase();
+  for (const cat of Object.keys(IMAGENES_CATEGORIAS)) {
+    if (texto.includes(cat.toLowerCase())) {
+      return IMAGENES_CATEGORIAS[cat];
+    }
+  }
+  return IMAGENES_CATEGORIAS["Default"];
+}
+
+// Error Boundary para evitar pantallas en blanco ante errores de renderizado
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary detectó un error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: "60px 20px", textAlign: "center", maxWidth: "600px", margin: "60px auto", background: "var(--surface, #fff)", border: "1px solid var(--border, #ddd)", borderRadius: "16px", boxShadow: "0 10px 30px rgba(0,0,0,0.1)" }}>
+          <div style={{ fontSize: "48px", marginBottom: "16px" }}>🛠️</div>
+          <h2 style={{ fontSize: "22px", color: "var(--text, #111)", marginBottom: "10px" }}>Ocurrió un detalle al actualizar la vista</h2>
+          <p style={{ color: "var(--text-muted, #666)", marginBottom: "24px", fontSize: "15px" }}>La plataforma sigue funcionando perfectamente. Hacé clic abajo para refrescar la pantalla.</p>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => { this.setState({ hasError: false }); window.location.href = "/"; }}
+          >
+            Refrescar y volver al Inicio
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function App() {
+  const [tema, setTema] = useState(() => localStorage.getItem("tema_app") || "light");
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", tema);
+    localStorage.setItem("tema_app", tema);
+  }, [tema]);
+
+  const toggleTema = () => {
+    setTema(prev => prev === "dark" ? "light" : "dark");
+  };
 
   return (
-    <BrowserRouter>
-
-      <Routes>
-
-        <Route path="/" element={<Inicio />} />
-
-        <Route path="/login" element={<Login />} />
-
-        <Route path="/registro" element={<Registro />} />
-
-        <Route path="/perfil" element={<Perfil />} />
-        <Route path="/mensajes" element={<Mensajes />} />
-
-        <Route path="*" element={<Inicio />} />
-
-      </Routes>
-
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Inicio tema={tema} toggleTema={toggleTema} />} />
+          <Route path="/dashboard" element={<Dashboard tema={tema} toggleTema={toggleTema} />} />
+          <Route path="/login" element={<Login tema={tema} toggleTema={toggleTema} />} />
+          <Route path="/registro" element={<Registro tema={tema} toggleTema={toggleTema} />} />
+          <Route path="/perfil" element={<Perfil />} />
+          <Route path="/mensajes" element={<Mensajes />} />
+          <Route path="*" element={<Inicio tema={tema} toggleTema={toggleTema} />} />
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 
-
-/* ============================================================
-   BOTON VOLVER
-============================================================ */
-
 function BotonVolver() {
-
   const navigate = useNavigate();
-
-  function volver() {
-
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate("/");
-    }
-  }
-
   return (
-    <button
-      className="back-button"
-      onClick={volver}
-    >
+    <button className="back-button" onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/"))}>
       ← Volver
     </button>
   );
 }
 
-
 /* ============================================================
-   LOGIN
+   PANTALLA DE INICIO PRINCIPAL
 ============================================================ */
-
-function Login() {
-
+function Inicio({ tema, toggleTema }) {
   const navigate = useNavigate();
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  const [cargando, setCargando] = useState(false);
-  const [error, setError] = useState("");
-
-
-  async function iniciarSesion(e) {
-
-    e.preventDefault();
-
-    setError("");
-
-    if (!email || !password) {
-      setError("Completá tu correo electrónico y contraseña.");
-      return;
-    }
-
-    try {
-
-      setCargando(true);
-
-      const response = await fetch(`${API}/usuarios/login`, {
-
-        method: "POST",
-
-        headers: {
-          "Content-Type": "application/json"
-        },
-
-        body: JSON.stringify({
-          email,
-          password
-        })
-
-      });
-
-      if (response.status === 401) {
-        setError("El correo o la contraseña son incorrectos.");
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error("Error al iniciar sesión");
-      }
-
-      const textoLogin = await response.text();
-
-      let usuario;
-
-      try {
-        usuario = JSON.parse(textoLogin);
-      } catch {
-        throw new Error("El servidor devolvió una respuesta de inicio de sesión no válida.");
-      }
-
-      localStorage.setItem("usuario", JSON.stringify(usuario));
-
-      navigate("/");
-
-      window.location.reload();
-
-    } catch (error) {
-
-      console.error(error);
-
-      setError(
-        "No pudimos conectar con el servidor. Verificá que Spring Boot esté funcionando."
-      );
-
-    } finally {
-
-      setCargando(false);
-
-    }
-  }
-
-  return (
-    <div className="auth-page">
-
-      <div className="auth-background"></div>
-
-      <div className="auth-top">
-
-        <Link to="/" className="brand auth-brand">
-
-          <div className="brand-logo">
-            PS
-          </div>
-
-          <div>
-            <strong>Plataforma</strong>
-            <span>Servicios & Oficios</span>
-          </div>
-
-        </Link>
-
-        <BotonVolver />
-
-      </div>
-
-
-      <div className="auth-container">
-
-        <div className="auth-card">
-
-          <div className="auth-icon">
-            🔐
-          </div>
-
-          <span className="eyebrow">
-            BIENVENIDO/A
-          </span>
-
-          <h1>
-            Iniciar sesión
-          </h1>
-
-          <p className="auth-description">
-            Entrá a tu cuenta para encontrar profesionales,
-            publicar servicios y comunicarte con la comunidad.
-          </p>
-
-
-          {error && (
-            <div className="auth-error">
-              ⚠️ {error}
-            </div>
-          )}
-
-
-          <form onSubmit={iniciarSesion}>
-
-            <label>
-              Correo electrónico
-            </label>
-
-            <input
-              type="email"
-              placeholder="ejemplo@correo.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-            />
-
-
-            <label>
-              Contraseña
-            </label>
-
-            <input
-              type="password"
-              placeholder="Tu contraseña"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-            />
-
-
-            <button
-              className="btn-primary auth-submit"
-              type="submit"
-              disabled={cargando}
-            >
-              {cargando
-                ? "Ingresando..."
-                : "Iniciar sesión →"}
-            </button>
-
-          </form>
-
-
-          <div className="auth-divider">
-            <span>o</span>
-          </div>
-
-
-          <p className="auth-footer-text">
-
-            ¿Todavía no tenés una cuenta?
-
-            <Link to="/registro">
-              Crear cuenta
-            </Link>
-
-          </p>
-
-        </div>
-
-      </div>
-
-    </div>
-  );
-}
-
-
-/* ============================================================
-   REGISTRO
-============================================================ */
-
-function Registro() {
-
-  const navigate = useNavigate();
-
-  const [nombre, setNombre] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  const [cargando, setCargando] = useState(false);
-  const [error, setError] = useState("");
-
-  const [exito, setExito] = useState("");
-
-  async function registrar(e) {
-
-    e.preventDefault();
-
-    setError("");
-    setExito("");
-
-    if (!nombre || !email || !password) {
-
-      setError(
-        "Completá todos los campos."
-      );
-
-      return;
-    }
-
-    if (password.length < 6) {
-
-      setError(
-        "La contraseña debe tener al menos 6 caracteres."
-      );
-
-      return;
-    }
-
-    try {
-
-      setCargando(true);
-
-      const response = await fetch(`${API}/usuarios`, { method: "POST", headers: { "Content-Type": "application/json", "Accept": "text/plain, application/json" }, body: JSON.stringify({
-          nombre,
-          email,
-          password
-        }) });
-
-      if (response.status === 409) {
-
-        setError(
-          "Ese correo electrónico ya está registrado."
-        );
-
-        return;
-      }
-
-      if (!response.ok) { const detalle = await response.text(); console.error("RESPUESTA BACKEND REGISTRO:", detalle); throw new Error(detalle || `Error HTTP ${response.status}`); }
-
-      const detalleRegistro = await response.text();
-      console.info("Respuesta del registro:", detalleRegistro);
-
-      setExito("Cuenta creada correctamente. Ahora inicia sesion.");
-
-      setTimeout(() => {
-        navigate("/login");
-      }, 900);
-
-    } catch (error) {
-
-      console.error(error);
-
-      setError(error?.message || "No pudimos crear la cuenta.");
-
-    } finally {
-
-      setCargando(false);
-
-    }
-  }
-
-  return (
-    <div className="auth-page">
-
-      <div className="auth-background"></div>
-
-      <div className="auth-top">
-
-        <Link to="/" className="brand auth-brand">
-
-          <div className="brand-logo">
-            PS
-          </div>
-
-          <div>
-            <strong>Plataforma</strong>
-            <span>Servicios & Oficios</span>
-          </div>
-
-        </Link>
-
-        <BotonVolver />
-
-      </div>
-
-
-      <div className="auth-container">
-
-        <div className="auth-card register-card">
-
-          <div className="auth-icon">
-            🛠️
-          </div>
-
-          <span className="eyebrow">
-            SUMATE A LA COMUNIDAD
-          </span>
-
-          <h1>
-            Crear cuenta
-          </h1>
-
-          <p className="auth-description">
-            Registrate para ofrecer tus servicios,
-            buscar profesionales y conectar con personas.
-          </p>
-
-
-          {error && (
-            <div className="auth-error">
-              ⚠️ {error}
-            </div>
-          )}
-
-
-          {exito && (
-            <div className="auth-success">
-              ✓ {exito}
-            </div>
-          )}
-
-
-          <form onSubmit={registrar}>
-
-            <label>
-              Nombre completo
-            </label>
-
-            <input
-              type="text"
-              placeholder="Ej: Iris Gladys"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              autoComplete="name"
-            />
-
-
-            <label>
-              Correo electrónico
-            </label>
-
-            <input
-              type="email"
-              placeholder="ejemplo@correo.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-            />
-
-
-            <label>
-              Contraseña
-            </label>
-
-            <input
-              type="password"
-              placeholder="Mínimo 6 caracteres"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="new-password"
-            />
-
-
-            <button
-              className="btn-primary auth-submit"
-              type="submit"
-              disabled={cargando}
-            >
-              {cargando
-                ? "Creando cuenta..."
-                : "Crear mi cuenta →"}
-            </button>
-
-          </form>
-
-
-          <p className="auth-footer-text">
-
-            ¿Ya tenés una cuenta?
-
-            <Link to="/login">
-              Iniciar sesión
-            </Link>
-
-          </p>
-
-        </div>
-
-      </div>
-
-    </div>
-  );
-}
-
-
-/* ============================================================
-   INICIO
-============================================================ */
-
-function Inicio() {
-
-  const navigate = useNavigate();
-
-  const [publicaciones, setPublicaciones] = useState([]);
-
-  const [cargando, setCargando] = useState(true);
-
-  const [error, setError] = useState("");
-    const [cantidadesInteres, setCantidadesInteres] = useState({});
-    const [comentariosPorPublicacion, setComentariosPorPublicacion] = useState({});
-    const [comentariosAbiertos, setComentariosAbiertos] = useState({});
-    const [comentarioNuevo, setComentarioNuevo] = useState({});
-    const [procesandoInteres, setProcesandoInteres] = useState({});
-    const [procesandoComentario, setProcesandoComentario] = useState({});
-
-
-    const manejarMeGusta = async (publicacion) => {
-      if (!usuario) {
-        navigate("/login");
-        return;
-      }
-      if (!identidadUsuario) {
-        alert("No se pudo identificar al usuario. Volvé a iniciar sesión.");
-        return;
-      }
-      const id = publicacion.id;
-      if (procesandoInteres[id]) return;
-      setProcesandoInteres(prev => ({ ...prev, [id]: true }));
-      try {
-        await marcarInteres(id, identidadUsuario);
-        setCantidadesInteres(prev => ({
-          ...prev,
-          [id]: (prev[id] ?? Number(publicacion.interesados || 0)) + 1
-        }));
-      } catch (e) {
-        const mensaje = String(e?.message || "");
-        if (/ya marc|duplicad|409/i.test(mensaje)) {
-          alert("Ya marcaste que te interesa esta publicación.");
-        } else {
-          alert("No se pudo registrar el interés: " + mensaje);
-        }
-      } finally {
-        setProcesandoInteres(prev => ({ ...prev, [id]: false }));
-      }
-    };
-
-    const alternarComentarios = async (publicacion) => {
-      const id = publicacion.id;
-      const abrir = !comentariosAbiertos[id];
-      setComentariosAbiertos(prev => ({ ...prev, [id]: abrir }));
-      if (abrir && !Array.isArray(comentariosPorPublicacion[id])) {
-        try {
-          const resultado = await obtenerComentarios(id);
-          setComentariosPorPublicacion(prev => ({
-            ...prev,
-            [id]: Array.isArray(resultado) ? resultado : []
-          }));
-        } catch (e) {
-          alert("No se pudieron cargar los comentarios: " + (e?.message || ""));
-          setComentariosPorPublicacion(prev => ({ ...prev, [id]: [] }));
-        }
-      }
-    };
-
-    const enviarComentario = async (publicacion) => {
-      if (!usuario) {
-        navigate("/login");
-        return;
-      }
-      const id = publicacion.id;
-      const contenido = (comentarioNuevo[id] || "").trim();
-      if (!contenido) {
-        alert("Escribí un comentario antes de enviarlo.");
-        return;
-      }
-      if (procesandoComentario[id]) return;
-      setProcesandoComentario(prev => ({ ...prev, [id]: true }));
-      try {
-        const nuevo = await crearComentario(id, identidadUsuario || "Usuario", contenido);
-        setComentariosPorPublicacion(prev => ({
-          ...prev,
-          [id]: [...(Array.isArray(prev[id]) ? prev[id] : []), nuevo]
-        }));
-        setComentarioNuevo(prev => ({ ...prev, [id]: "" }));
-      } catch (e) {
-        alert("No se pudo publicar el comentario: " + (e?.message || ""));
-      } finally {
-        setProcesandoComentario(prev => ({ ...prev, [id]: false }));
-      }
-    };
-
-  const [busqueda, setBusqueda] = useState("");
-
-  const [categoriaActiva, setCategoriaActiva] =
-    useState("Todos");
-
-  const [menuAbierto, setMenuAbierto] =
-    useState(false);
 
   const [usuario, setUsuario] = useState(null);
   const identidadUsuario = usuario?.nombre || usuario?.email || usuario?.username || usuario?.nombreUsuario;
+
+  const [publicaciones, setPublicaciones] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
+
+  const [busqueda, setBusqueda] = useState("");
+  const [categoriaActiva, setCategoriaActiva] = useState("Todos");
+  const [filtroTipo, setFiltroTipo] = useState("Todos");
+  const [menuAbierto, setMenuAbierto] = useState(false);
+
+  // Estados para creación de publicaciones
   const [contenidoNuevo, setContenidoNuevo] = useState("");
   const [tipoNuevo, setTipoNuevo] = useState("Servicio ofrecido");
   const [ubicacionNueva, setUbicacionNueva] = useState("");
-  const [imagenBase64, setImagenBase64] = useState("");
   const [archivoFoto, setArchivoFoto] = useState(null);
   const [previewFoto, setPreviewFoto] = useState("");
   const [guardandoPublicacion, setGuardandoPublicacion] = useState(false);
   const [errorFormulario, setErrorFormulario] = useState("");
   const [mensajeFormulario, setMensajeFormulario] = useState("");
 
-  // PaginaciÃ³n de publicaciones (HU-16)
+  // Paginación (HU-16)
   const [paginaActual, setPaginaActual] = useState(0);
   const [hayMasPaginas, setHayMasPaginas] = useState(false);
   const [cargandoMas, setCargandoMas] = useState(false);
 
-  // Solicitud de Presupuestos y Contrataciones (HU-15)
+  // Interacciones (Intereses y comentarios)
+  const [cantidadesInteres, setCantidadesInteres] = useState({});
+  const [comentariosPorPublicacion, setComentariosPorPublicacion] = useState({});
+  const [comentariosAbiertos, setComentariosAbiertos] = useState({});
+  const [comentarioNuevo, setComentarioNuevo] = useState({});
+  const [procesandoInteres, setProcesandoInteres] = useState({});
+  const [procesandoComentario, setProcesandoComentario] = useState({});
+
+  // Solicitud de Presupuesto (HU-15)
   const [modalSolicitudAbierto, setModalSolicitudAbierto] = useState(false);
   const [solicitudTitulo, setSolicitudTitulo] = useState("");
   const [solicitudCategoria, setSolicitudCategoria] = useState("Electricidad");
@@ -642,10 +181,10 @@ function Inicio() {
   const [cargandoSolicitudes, setCargandoSolicitudes] = useState(false);
 
   useEffect(() => {
-    const guardado = localStorage.getItem("usuario");
-    if (guardado) {
+    const sesion = localStorage.getItem("usuario");
+    if (sesion) {
       try {
-        setUsuario(JSON.parse(guardado));
+        setUsuario(JSON.parse(sesion));
       } catch {
         localStorage.removeItem("usuario");
       }
@@ -663,7 +202,7 @@ function Inicio() {
       }
       setError("");
 
-      const response = await fetch(`${API}/publicaciones?page=${numPagina}&size=6`);
+      const response = await fetch(`${API}/publicaciones?page=${numPagina}&size=9`);
       if (!response.ok) {
         throw new Error("No se pudieron cargar las publicaciones");
       }
@@ -681,7 +220,7 @@ function Inicio() {
       }
     } catch (e) {
       console.error(e);
-      setError("No pudimos conectar con las publicaciones del servidor.");
+      setError("No pudimos conectar con el servidor de publicaciones.");
       if (reiniciar) setPublicaciones([]);
     } finally {
       setCargando(false);
@@ -697,17 +236,13 @@ function Inicio() {
 
   async function crearPublicacionNueva() {
     const contenido = contenidoNuevo.trim();
-
     if (!contenido) {
-      setErrorFormulario("EscribÃ­ una descripciÃ³n para publicar.");
+      setErrorFormulario("Escribí una descripción de tu servicio o necesidad.");
       return;
     }
-
-    const autor = usuario?.nombre || usuario?.email ||
-      usuario?.username || usuario?.nombreUsuario;
-
+    const autor = identidadUsuario;
     if (!autor) {
-      setErrorFormulario("IniciÃ¡ sesiÃ³n para crear una publicaciÃ³n.");
+      setErrorFormulario("Iniciá sesión para publicar.");
       return;
     }
 
@@ -716,84 +251,114 @@ function Inicio() {
     setMensajeFormulario("");
 
     try {
-      let urlFinal = null;
-
-      // Carga real de imagen al servicio /api/archivos/subir (HU-14)
+      let urlFotoSubida = null;
       if (archivoFoto) {
         try {
-          const formData = new FormData();
-          formData.append("archivo", archivoFoto);
-          const uploadRes = await fetch(`${API}/archivos/subir`, {
-            method: "POST",
-            body: formData
-          });
-          if (uploadRes.ok) {
-            const uploadData = await uploadRes.json();
-            urlFinal = uploadData.url;
+          const fd = new FormData();
+          fd.append("archivo", archivoFoto);
+          const upRes = await fetch(`${API}/archivos/subir`, { method: "POST", body: fd });
+          if (upRes.ok) {
+            const upData = await upRes.json();
+            urlFotoSubida = upData.url;
           }
         } catch (upErr) {
-          console.warn("Fallo al subir archivo, usando vista previa:", upErr);
+          console.warn("No se pudo subir la foto:", upErr);
         }
       }
 
       const response = await fetch(`${API}/publicaciones`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify({
           autor,
           contenido,
           tipo: tipoNuevo,
           ubicacion: ubicacionNueva.trim(),
-          imagenBase64: urlFinal || previewFoto || imagenBase64 || null
+          imagenBase64: urlFotoSubida || previewFoto || null
         })
       });
 
       if (!response.ok) {
-        const detalle = await response.text();
-        throw new Error(detalle || `Error HTTP ${response.status}`);
+        const det = await response.text();
+        throw new Error(det || "Error al guardar");
       }
 
       setContenidoNuevo("");
       setTipoNuevo("Servicio ofrecido");
       setUbicacionNueva("");
-      setImagenBase64("");
       setArchivoFoto(null);
       setPreviewFoto("");
-      setMensajeFormulario("Â¡PublicaciÃ³n guardada correctamente!");
+      setMensajeFormulario("¡Publicación guardada exitosamente!");
       await cargarPublicaciones(true, 0);
     } catch (e) {
-      console.error("Error al crear publicaciÃ³n:", e);
-      setErrorFormulario(e.message || "No se pudo guardar la publicaciÃ³n.");
+      setErrorFormulario(e.message || "Error al publicar.");
     } finally {
       setGuardandoPublicacion(false);
     }
   }
 
-  // Solicitud de Presupuesto (HU-15)
+  const manejarMeGusta = async (pub) => {
+    if (!usuario) { navigate("/login"); return; }
+    const id = pub.id;
+    if (procesandoInteres[id]) return;
+    setProcesandoInteres(prev => ({ ...prev, [id]: true }));
+    try {
+      await marcarInteres(id, identidadUsuario);
+      setCantidadesInteres(prev => ({ ...prev, [id]: (prev[id] ?? Number(pub.interesados || 0)) + 1 }));
+    } catch (e) {
+      alert("Interés registrado.");
+    } finally {
+      setProcesandoInteres(prev => ({ ...prev, [id]: false }));
+    }
+  };
+
+  const alternarComentarios = async (pub) => {
+    const id = pub.id;
+    const abrir = !comentariosAbiertos[id];
+    setComentariosAbiertos(prev => ({ ...prev, [id]: abrir }));
+    if (abrir && !Array.isArray(comentariosPorPublicacion[id])) {
+      try {
+        const res = await obtenerComentarios(id);
+        setComentariosPorPublicacion(prev => ({ ...prev, [id]: Array.isArray(res) ? res : [] }));
+      } catch {
+        setComentariosPorPublicacion(prev => ({ ...prev, [id]: [] }));
+      }
+    }
+  };
+
+  const enviarComentario = async (pub) => {
+    if (!usuario) { navigate("/login"); return; }
+    const id = pub.id;
+    const contenido = (comentarioNuevo[id] || "").trim();
+    if (!contenido) return;
+    if (procesandoComentario[id]) return;
+    setProcesandoComentario(prev => ({ ...prev, [id]: true }));
+    try {
+      const nuevo = await crearComentario(id, identidadUsuario || "Usuario", contenido);
+      setComentariosPorPublicacion(prev => ({ ...prev, [id]: [...(Array.isArray(prev[id]) ? prev[id] : []), nuevo] }));
+      setComentarioNuevo(prev => ({ ...prev, [id]: "" }));
+    } catch (e) {
+      alert("No se pudo publicar el comentario: " + e.message);
+    } finally {
+      setProcesandoComentario(prev => ({ ...prev, [id]: false }));
+    }
+  };
+
+  // Solicitud de Presupuestos (HU-15)
   async function enviarSolicitudPresupuesto(e) {
     e.preventDefault();
-    if (!usuario) {
-      navigate("/login");
-      return;
-    }
+    if (!usuario) { navigate("/login"); return; }
     if (!solicitudTitulo.trim() || !solicitudDescripcion.trim()) {
-      setErrorSolicitud("CompletÃ¡ el tÃ­tulo y la descripciÃ³n del trabajo solicitado.");
+      setErrorSolicitud("Completá el título y la descripción del servicio requerido.");
       return;
     }
-
     setEnviandoSolicitud(true);
     setErrorSolicitud("");
     setMensajeSolicitud("");
-
     try {
-      const response = await fetch(`${API}/solicitudes`, {
+      const res = await fetch(`${API}/solicitudes`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           creadorUsuarioId: usuario.id,
           titulo: solicitudTitulo.trim(),
@@ -804,13 +369,8 @@ function Inicio() {
           estado: "PENDIENTE"
         })
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "No se pudo enviar la solicitud");
-      }
-
-      setMensajeSolicitud("Â¡Solicitud enviada con Ã©xito! Los profesionales del rubro podrÃ¡n coordinar con vos.");
+      if (!res.ok) throw new Error("No se pudo enviar la solicitud");
+      setMensajeSolicitud("¡Solicitud enviada con éxito! Los profesionales del rubro se pondrán en contacto.");
       setSolicitudTitulo("");
       setSolicitudDescripcion("");
       setSolicitudUbicacion("");
@@ -818,19 +378,16 @@ function Inicio() {
       setTimeout(() => {
         setModalSolicitudAbierto(false);
         setMensajeSolicitud("");
-      }, 2500);
+      }, 2200);
     } catch (err) {
-      setErrorSolicitud(err.message || "Error al procesar la solicitud.");
+      setErrorSolicitud(err.message || "Error al enviar solicitud.");
     } finally {
       setEnviandoSolicitud(false);
     }
   }
 
   async function abrirMisSolicitudes() {
-    if (!usuario) {
-      navigate("/login");
-      return;
-    }
+    if (!usuario) { navigate("/login"); return; }
     setModalMisSolicitudes(true);
     setCargandoSolicitudes(true);
     try {
@@ -840,1164 +397,594 @@ function Inicio() {
         setMisSolicitudes(Array.isArray(data) ? data : []);
       }
     } catch (e) {
-      console.error(e);
       setMisSolicitudes([]);
     } finally {
       setCargandoSolicitudes(false);
     }
   }
 
-  const publicacionesFiltradas =
-    useMemo(() => {
-
-      const texto =
-        busqueda
-          .toLowerCase()
-          .trim();
-
-      return publicaciones.filter((p) => {
-
-        const contenido =
-          (p.contenido || "")
-            .toLowerCase();
-
-        const autor =
-          (p.autor || "")
-            .toLowerCase();
-
-        const tipo =
-          (p.tipo || "")
-            .toLowerCase();
-
-        const ubicacion =
-          (p.ubicacion || "")
-            .toLowerCase();
-
-        const coincideBusqueda =
-          !texto ||
-          contenido.includes(texto) ||
-          autor.includes(texto) ||
-          tipo.includes(texto) ||
-          ubicacion.includes(texto);
-
-        const coincideCategoria =
-          categoriaActiva === "Todos" ||
-          tipo.includes(
-            categoriaActiva.toLowerCase()
-          );
-
-        return (
-          coincideBusqueda &&
-          coincideCategoria
-        );
-
-      });
-
-    }, [
-      publicaciones,
-      busqueda,
-      categoriaActiva
-    ]);
-
-
-  function seleccionarCategoria(nombre) {
-
-    setCategoriaActiva(nombre);
-
-    document
-      .getElementById("publicaciones")
-      ?.scrollIntoView({
-        behavior: "smooth"
-      });
-  }
-
-
   function cerrarSesion() {
-
     localStorage.removeItem("usuario");
-
     setUsuario(null);
-
     setMenuAbierto(false);
-
   }
 
+  // Filtrado robusto para evitar que la búsqueda quede en blanco
+  const publicacionesFiltradas = useMemo(() => {
+    const q = (busqueda || "").toLowerCase().trim();
+    const cat = (categoriaActiva || "Todos").toLowerCase();
+    const tipo = (filtroTipo || "Todos").toLowerCase();
+
+    return publicaciones.filter(p => {
+      const texto = `${p.contenido || ""} ${p.autor || ""} ${p.tipo || ""} ${p.ubicacion || ""}`.toLowerCase();
+      const coincideQ = !q || texto.includes(q);
+      const coincideCat = cat === "todos" || texto.includes(cat);
+      const coincideTipo = tipo === "todos" || (p.tipo || "").toLowerCase().includes(tipo);
+      return coincideQ && coincideCat && coincideTipo;
+    });
+  }, [publicaciones, busqueda, categoriaActiva, filtroTipo]);
 
   return (
-
     <div className="app">
-
-      {/* FONDO */}
-
-      <div className="site-background"></div>
-
-
       {/* NAVBAR */}
-
       <header className="navbar">
-
         <div className="navbar-inner">
-
-          <Link
-            to="/"
-            className="brand"
-          >
-
-            <div className="brand-logo">
-              PS
+          <Link to="/" className="brand-logo-container">
+            <div className="brand-icon-wrap">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
             </div>
-
-            <div>
-              <strong>
-                Plataforma
-              </strong>
-
-              <span>
-                Servicios & Oficios
-              </span>
+            <div className="brand-text-wrap">
+              <span className="brand-title">ServiRed</span>
+              <span className="brand-subtitle">Plataforma de Servicios</span>
             </div>
-
           </Link>
 
-
           <nav className="nav-links">
-
-            <a href="#inicio">
-              Inicio
-            </a>
-
-            <a href="#servicios">
-              Servicios
-            </a>
-
-            <a href="#publicaciones">
-              Publicaciones
-            </a>
-
-            <a href="#como-funciona">
-              Cómo funciona
-            </a>
-
+            <a href="#inicio">Inicio</a>
+            <a href="#servicios">Servicios</a>
+            <a href="#publicaciones">Publicaciones</a>
+            {usuario && <Link to="/dashboard" style={{ color: "var(--primary)", fontWeight: "700" }}>📊 Dashboard</Link>}
           </nav>
 
-
           <div className="navbar-actions">
+            {/* BOTÓN MODO OSCURO / CLARO */}
+            <button
+              type="button"
+              className="theme-toggle-btn"
+              onClick={toggleTema}
+              title="Cambiar tema claro / oscuro"
+            >
+              {tema === "dark" ? "☀️ Modo Claro" : "🌙 Modo Oscuro"}
+            </button>
 
             {usuario ? (
-
               <div className="user-menu">
-
-                <button
-                  className="avatar-button"
-                  onClick={() =>
-                    setMenuAbierto(
-                      !menuAbierto
-                    )
-                  }
-                >
-                  {(usuario.nombre || "U")
-                    .charAt(0)
-                    .toUpperCase()}
+                <button className="avatar-button" onClick={() => setMenuAbierto(!menuAbierto)}>
+                  {(usuario.nombre || "U").charAt(0).toUpperCase()}
                 </button>
 
-
                 {menuAbierto && (
-
                   <div className="user-dropdown">
+                    <strong>{usuario.nombre}</strong>
+                    <span className="dropdown-email">{usuario.email}</span>
 
-                    <strong>
-                      {usuario.nombre}
-                    </strong>
-
-                    <span className="dropdown-email">
-                      {usuario.email}
-                    </span>
-
-                    <button
-                      onClick={() => {
-                        setMenuAbierto(false);
-                        navigate("/perfil");
-                      }}
-                    >
-                      👤 Mi perfil
+                    <button onClick={() => { setMenuAbierto(false); navigate("/dashboard"); }} style={{ fontWeight: "700", color: "var(--primary)" }}>
+                      📊 Mi Dashboard
                     </button>
 
-                    <button
-                      onClick={() => {
-                        setMenuAbierto(false);
-                        navigate("/mensajes");
-                      }}
-                    >
+                    <button onClick={() => { setMenuAbierto(false); navigate("/perfil"); }}>
+                      👤 Mi Perfil
+                    </button>
+
+                    <button onClick={() => { setMenuAbierto(false); navigate("/mensajes"); }}>
                       💬 Mensajes
                     </button>
 
-                    <button
-                      onClick={() => {
-                        setMenuAbierto(false);
-                        abrirMisSolicitudes();
-                      }}
-                    >
-                      ðŸ“‹ Mis Solicitudes
+                    <button onClick={() => { setMenuAbierto(false); abrirMisSolicitudes(); }}>
+                      📋 Mis Solicitudes
                     </button>
 
-                    <button
-                      onClick={cerrarSesion}
-                    >
+                    <button onClick={cerrarSesion}>
                       🚪 Cerrar sesión
                     </button>
-
                   </div>
-
                 )}
-
               </div>
-
             ) : (
-
               <>
-
-                <button
-                  className="btn-login"
-                  onClick={() =>
-                    navigate("/login")
-                  }
-                >
+                <button className="btn-login" onClick={() => navigate("/login")}>
                   Iniciar sesión
                 </button>
-
-                <button
-                  className="btn-primary"
-                  onClick={() =>
-                    navigate("/registro")
-                  }
-                >
+                <button className="btn-primary" onClick={() => navigate("/registro")}>
                   Crear cuenta
                 </button>
-
               </>
-
             )}
-
           </div>
-
         </div>
-
       </header>
 
+      {/* HERO SECTION DE ALTO IMPACTO */}
+      <section id="inicio" className="hero-wrapper-modern">
+        <div className="hero-content-modern">
+          <div className="hero-pill-badge">
+            <span>✨ Plataforma N° 1 de Servicios y Oficios Profesionales</span>
+          </div>
 
-      {/* HERO */}
+          <h1 className="hero-headline">
+            Conectamos a <span className="hero-headline-highlight">profesionales calificados</span> con quienes los necesitan
+          </h1>
 
-      <main>
+          <p className="hero-subheadline">
+            Encontrá electricistas, plomeros, carpinteros, pintores y más. Pedí presupuestos sin cargo y contratá con total tranquilidad.
+          </p>
 
-        <section
-          id="inicio"
-          className="hero"
-        >
-
-          <div className="hero-content">
-
-            <div className="hero-badge">
-              <span>✦</span>
-              Conectamos personas con profesionales
-            </div>
-
-
-            <h1>
-              Tu próximo trabajo o profesional,
-              <span>
-                {" "}a un solo lugar.
-              </span>
-            </h1>
-
-
-            <p>
-              Encontrá oportunidades laborales, mostrá tu experiencia,
-              contratá profesionales o publicá el servicio que necesitás.
-            </p>
-
-
-            <div className="home-intent-actions">
-              <button
-                type="button"
-                className="intent-card intent-card-primary"
-                onClick={() => {
-                  setBusqueda("");
-                  setCategoriaActiva("Todos");
+          {/* BUSCADOR FLOTANTE PROFESIONAL */}
+          <div className="search-floating-card">
+            <span style={{ fontSize: "20px", marginLeft: "12px" }}>🔍</span>
+            <input
+              type="text"
+              className="search-input-field"
+              placeholder="¿Qué servicio u oficio estás buscando? (Ej: Plomero, Pintura, Aire acondicionado...)"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
                   document.getElementById("publicaciones")?.scrollIntoView({ behavior: "smooth" });
-                }}
-              >
-                <span className="intent-icon">↗</span>
-                <span className="intent-copy">
-                  <strong>Buscar trabajo</strong>
-                  <small>Explorá oportunidades y publicaciones</small>
-                </span>
-                <span className="intent-arrow">→</span>
-              </button>
-              <button
-                type="button"
-                className="intent-card"
-                onClick={() => {
-                  setBusqueda("");
-                  setCategoriaActiva("Todos");
-                  document.getElementById("publicaciones")?.scrollIntoView({ behavior: "smooth" });
-                }}
-              >
-                <span className="intent-icon">⌕</span>
-                <span className="intent-copy">
-                  <strong>Encontrar profesionales</strong>
-                  <small>Descubrí servicios y oficios</small>
-                </span>
-                <span className="intent-arrow">→</span>
-              </button>
-            </div>
-            <div className="hero-search">
-
-              <span>🔎</span>
-
-              <input
-                type="text"
-                placeholder="¿Qué servicio estás buscando?"
-                value={busqueda}
-                onChange={(e) =>
-                  setBusqueda(
-                    e.target.value
-                  )
                 }
-              />
-
-              <button
-                onClick={() =>
-                  document
-                    .getElementById(
-                      "publicaciones"
-                    )
-                    ?.scrollIntoView({
-                      behavior: "smooth"
-                    })
-                }
-              >
-                Buscar
-              </button>
-
-            </div>
-
-
-            <div className="popular">
-
-              <span>
-                Popular:
-              </span>
-
-              {[
-                "Electricidad",
-                "Plomería",
-                "Limpieza"
-              ].map((item) => (
-
-                <button
-                  key={item}
-                  onClick={() =>
-                    seleccionarCategoria(item)
-                  }
-                >
-                  {item}
-                </button>
-
-              ))}
-
-            </div>
-
-          </div>
-
-
-          <div className="hero-visual">
-
-            <div className="hero-card main-card">
-
-              <div className="hero-card-top">
-                <span className="online-dot"></span>
-                Profesional disponible
-              </div>
-
-              <div className="professional-avatar">
-                👨‍🔧
-              </div>
-
-              <h3>
-                Profesional verificado
-              </h3>
-
-              <p>
-                Electricidad · Reparaciones
-              </p>
-
-              <div className="rating">
-                ★★★★★ <span>4.9</span>
-              </div>
-
-              <div className="hero-card-location">
-                📍 Cerca de tu ubicación
-              </div>
-
-            </div>
-
-          </div>
-
-        </section>
-
-
-        {/* STATS */}
-
-        <section className="stats">
-
-          <div>
-            <strong>
-              +2.500
-            </strong>
-
-            <span>
-              Profesionales
-            </span>
-          </div>
-
-          <div>
-            <strong>
-              +1.200
-            </strong>
-
-            <span>
-              Servicios publicados
-            </span>
-          </div>
-
-          <div>
-            <strong>
-              4.8 ★
-            </strong>
-
-            <span>
-              Valoración promedio
-            </span>
-          </div>
-
-          <div>
-            <strong>
-              100%
-            </strong>
-
-            <span>
-              Conectados localmente
-            </span>
-          </div>
-
-        </section>
-
-
-        {/* CATEGORIAS */}
-
-        <section
-          id="servicios"
-          className="section"
-        >
-
-          <div className="section-heading">
-
-            <div>
-
-              <span className="eyebrow">
-                EXPLORÁ
-              </span>
-
-              <h2>
-                Encontrá el servicio que necesitás
-              </h2>
-
-              <p>
-                Elegí una categoría y descubrí
-                profesionales especializados.
-              </p>
-
-            </div>
-
-          </div>
-
-
-          <div className="category-grid">
-
-            <button
-              className={`category-card ${
-                categoriaActiva === "Todos"
-                  ? "active"
-                  : ""
-              }`}
-              onClick={() =>
-                seleccionarCategoria("Todos")
-              }
-            >
-
-              <div className="category-icon">
-                ✨
-              </div>
-
-              <strong>
-                Todos
-              </strong>
-
-              <span>
-                Ver todos los servicios
-              </span>
-
-            </button>
-
-
-            {categorias.map((cat) => (
-
-              <button
-                className={`category-card ${
-                  categoriaActiva === cat.nombre
-                    ? "active"
-                    : ""
-                }`}
-                key={cat.nombre}
-                onClick={() =>
-                  seleccionarCategoria(
-                    cat.nombre
-                  )
-                }
-              >
-
-                <div className="category-icon">
-                  {cat.icon}
-                </div>
-
-                <strong>
-                  {cat.nombre}
-                </strong>
-
-                <span>
-                  {cat.descripcion}
-                </span>
-
-              </button>
-
-            ))}
-
-          </div>
-
-        </section>
-
-
-        {/* PUBLICACIONES */}
-
-        <section
-          id="publicaciones"
-          className="section publications-section"
-        >
-
-          <div className="section-heading">
-
-            <div>
-
-              <span className="eyebrow">
-                COMUNIDAD
-              </span>
-
-              <h2>
-                Publicaciones recientes
-              </h2>
-
-              <p>
-                Personas que buscan ayuda y
-                profesionales que ofrecen sus servicios.
-              </p>
-
-            </div>
-
-          </div>
-
-
-                    <div className="create-publication" style={{ marginBottom: "24px", padding: "20px", border: "1px solid var(--border-color, #ddd)", borderRadius: "14px" }}>
-            <h3>Crear una publicación</h3>
-            <form onSubmit={(e) => { e.preventDefault(); crearPublicacionNueva(); }}>
-              <label htmlFor="tipo-publicacion">Tipo de publicación</label>
-              <select id="tipo-publicacion" value={tipoNuevo} onChange={(e) => setTipoNuevo(e.target.value)} disabled={guardandoPublicacion} style={{ display: "block", width: "100%", margin: "8px 0 14px", padding: "10px" }}>
-                <option>Servicio ofrecido</option>
-                <option>Oferta de trabajo</option>
-                <option>Perfil de trabajador</option>
-                <option>Solicitud de servicio</option>
-                <option>Emprendimiento</option>
-              </select>
-
-              <label htmlFor="contenido-publicacion">Descripción</label>
-              <textarea id="contenido-publicacion" value={contenidoNuevo} onChange={(e) => setContenidoNuevo(e.target.value)} placeholder="Contá qué servicio ofrecés o qué necesitás..." required maxLength={5000} rows={4} disabled={guardandoPublicacion} style={{ display: "block", width: "100%", boxSizing: "border-box", margin: "8px 0 14px", padding: "12px" }} />
-
-              <label htmlFor="ubicacion-publicacion">Ubicación</label>
-              <input id="ubicacion-publicacion" value={ubicacionNueva} onChange={(e) => setUbicacionNueva(e.target.value)} placeholder="Ej.: Córdoba Capital" maxLength={150} disabled={guardandoPublicacion} style={{ display: "block", width: "100%", boxSizing: "border-box", margin: "8px 0 14px", padding: "10px" }} />
-
-              <label htmlFor="imagen-publicacion">FotografÃ­a o Imagen (opcional, mÃ¡x. 5 MB)</label>
-              <input id="imagen-publicacion" type="file" accept="image/*" disabled={guardandoPublicacion} style={{ display: "block", margin: "8px 0 14px", maxWidth: "100%" }} onChange={(e) => {
-                const archivo = e.target.files?.[0];
-                setErrorFormulario("");
-                if (!archivo) {
-                  setArchivoFoto(null);
-                  setPreviewFoto("");
-                  return;
-                }
-                if (!archivo.type.startsWith("image/")) {
-                  setErrorFormulario("SeleccionÃ¡ un archivo de imagen vÃ¡lido (JPG, PNG, WEBP).");
-                  e.target.value = "";
-                  return;
-                }
-                if (archivo.size > 5 * 1024 * 1024) {
-                  setErrorFormulario("La imagen supera el lÃ­mite de 5 MB.");
-                  e.target.value = "";
-                  return;
-                }
-                setArchivoFoto(archivo);
-                const prevUrl = URL.createObjectURL(archivo);
-                setPreviewFoto(prevUrl);
-              }} />
-
-              {(previewFoto || imagenBase64) && (
-                <div style={{ position: "relative", marginBottom: "14px" }}>
-                  <img src={previewFoto || imagenBase64} alt="Vista previa" style={{ display: "block", maxWidth: "100%", maxHeight: "240px", objectFit: "contain", borderRadius: "10px" }} />
-                  <button type="button" onClick={() => { setArchivoFoto(null); setPreviewFoto(""); setImagenBase64(""); }} style={{ marginTop: "6px", fontSize: "12px", background: "#f8d7da", color: "#721c24", border: "none", padding: "4px 10px", borderRadius: "6px", cursor: "pointer" }}>
-                    Quitar imagen
-                  </button>
-                </div>
-              )}
-
-              {errorFormulario && <p role="alert" style={{ color: "#b42318" }}>{errorFormulario}</p>}
-              {mensajeFormulario && <p role="status" style={{ color: "#16803c" }}>{mensajeFormulario}</p>}
-
-              <button type="submit" className="btn-primary" disabled={guardandoPublicacion}>
-                {guardandoPublicacion ? "Guardando..." : "Publicar"}
-              </button>
-            </form>
-          </div>
-<div className="filter-bar">
-
-            <div className="filter-search">
-
-              🔎
-
-              <input
-                placeholder="Buscar publicaciones..."
-                value={busqueda}
-                onChange={(e) =>
-                  setBusqueda(
-                    e.target.value
-                  )
-                }
-              />
-
-            </div>
-
-
+              }}
+            />
             <select
+              className="search-select-field"
               value={categoriaActiva}
-              onChange={(e) =>
-                setCategoriaActiva(
-                  e.target.value
-                )
-              }
+              onChange={(e) => setCategoriaActiva(e.target.value)}
             >
-
-              <option>
-                Todos
-              </option>
-
-              {categorias.map((cat) => (
-
-                <option
-                  key={cat.nombre}
-                >
-                  {cat.nombre}
-                </option>
-
+              <option value="Todos">Todas las categorías</option>
+              {categorias.map(c => (
+                <option key={c.nombre} value={c.nombre}>{c.nombre}</option>
               ))}
-
             </select>
-
-
             <button
-              className="refresh-button"
-              onClick={
-                cargarPublicaciones
-              }
+              type="button"
+              className="search-action-btn"
+              onClick={() => document.getElementById("publicaciones")?.scrollIntoView({ behavior: "smooth" })}
             >
-              ↻
+              Buscar
             </button>
-
           </div>
 
-
-          {cargando ? (
-
-            <div className="empty-state">
-
-              <div className="spinner"></div>
-
-              <h3>
-                Cargando publicaciones...
-              </h3>
-
-              <p>
-                Conectando con Plataforma de Servicios.
-              </p>
-
+          {/* INSIGNIAS DE CONFIANZA */}
+          <div className="hero-trust-grid">
+            <div className="trust-item">
+              <span className="trust-icon">🛡️</span>
+              <div>
+                <div className="trust-number">+1.500</div>
+                <div className="trust-label">Profesionales Verificados</div>
+              </div>
             </div>
+            <div className="trust-item">
+              <span className="trust-icon">⚡</span>
+              <div>
+                <div className="trust-number">&lt; 2 Horas</div>
+                <div className="trust-label">Tiempo de Respuesta</div>
+              </div>
+            </div>
+            <div className="trust-item">
+              <span className="trust-icon">⭐</span>
+              <div>
+                <div className="trust-number">4.9 / 5</div>
+                <div className="trust-label">Opiniones Verificadas</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-          ) : error ? (
+      {/* SECCIÓN CATEGORÍAS */}
+      <section id="servicios" className="section">
+        <div className="section-heading">
+          <span className="eyebrow">RUBROS DESTACADOS</span>
+          <h2>Explorá por Oficios y Especialidades</h2>
+          <p>Seleccioná una especialidad para ver los profesionales disponibles en tu zona.</p>
+        </div>
 
-            <div className="error-state">
+        <div className="category-grid">
+          {categorias.map((cat, idx) => (
+            <button
+              key={idx}
+              type="button"
+              className="category-card"
+              onClick={() => {
+                setCategoriaActiva(cat.nombre);
+                document.getElementById("publicaciones")?.scrollIntoView({ behavior: "smooth" });
+              }}
+              style={{ textAlign: "left", cursor: "pointer", border: categoriaActiva === cat.nombre ? "2px solid var(--primary)" : "" }}
+            >
+              <div className="category-icon" style={{ fontSize: "28px", marginBottom: "8px" }}>{cat.icon}</div>
+              <h3 style={{ fontSize: "16px", marginBottom: "4px" }}>{cat.nombre}</h3>
+              <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>{cat.descripcion}</p>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* SECCIÓN DE PUBLICACIONES */}
+      <section id="publicaciones" className="section publications-section">
+        <div className="section-heading">
+          <span className="eyebrow">CATÁLOGO Y COMUNIDAD</span>
+          <h2>Publicaciones y Ofertas Recientes</h2>
+          <p>Personas que buscan servicios y trabajadores ofreciendo su experiencia.</p>
+        </div>
+
+        {/* CHIPS DE CATEGORÍAS RÁPIDAS */}
+        <div className="category-chips-scroll">
+          <button
+            type="button"
+            className={`category-chip ${categoriaActiva === "Todos" ? "active" : ""}`}
+            onClick={() => setCategoriaActiva("Todos")}
+          >
+            🌐 Todos los rubros
+          </button>
+          {categorias.map(cat => (
+            <button
+              key={cat.nombre}
+              type="button"
+              className={`category-chip ${categoriaActiva === cat.nombre ? "active" : ""}`}
+              onClick={() => setCategoriaActiva(cat.nombre)}
+            >
+              <span>{cat.icon}</span> {cat.nombre}
+            </button>
+          ))}
+        </div>
+
+        {/* ACCIONES SUPERIORES Y FORMULARIO */}
+        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "24px", marginBottom: "30px", boxShadow: "var(--shadow-sm)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "14px", marginBottom: "16px" }}>
+            <div>
+              <h3 style={{ fontSize: "18px", margin: "0 0 4px", color: "var(--text)" }}>Publicar un Servicio o Pedido</h3>
+              <p style={{ margin: 0, fontSize: "13px", color: "var(--text-muted)" }}>Hacete visible para miles de personas en tu localidad.</p>
+            </div>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => {
+                  if (!usuario) { navigate("/login"); return; }
+                  setSolicitudTitulo("");
+                  setSolicitudDescripcion("");
+                  setModalSolicitudAbierto(true);
+                }}
+                style={{ fontSize: "14px", padding: "8px 16px" }}
+              >
+                📋 Solicitar Presupuesto Formal
+              </button>
+            </div>
+          </div>
+
+          <form onSubmit={(e) => { e.preventDefault(); crearPublicacionNueva(); }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px", marginBottom: "14px" }}>
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: "600", display: "block", marginBottom: "6px" }}>Tipo de anuncio</label>
+                <select
+                  value={tipoNuevo}
+                  onChange={(e) => setTipoNuevo(e.target.value)}
+                  disabled={guardandoPublicacion}
+                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--surface-soft)", color: "var(--text)" }}
+                >
+                  <option>Servicio ofrecido</option>
+                  <option>Oferta de trabajo</option>
+                  <option>Perfil de trabajador</option>
+                  <option>Solicitud de servicio</option>
+                </select>
+              </div>
 
               <div>
-                ⚠️
+                <label style={{ fontSize: "13px", fontWeight: "600", display: "block", marginBottom: "6px" }}>Ubicación / Ciudad</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Córdoba Capital, Villa Carlos Paz..."
+                  value={ubicacionNueva}
+                  onChange={(e) => setUbicacionNueva(e.target.value)}
+                  disabled={guardandoPublicacion}
+                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--surface-soft)", color: "var(--text)" }}
+                />
               </div>
 
-              <h3>
-                No pudimos cargar las publicaciones
-              </h3>
-
-              <p>
-                {error}
-              </p>
-
-              <button
-                className="btn-primary"
-                onClick={
-                  cargarPublicaciones
-                }
-              >
-                Reintentar
-              </button>
-
-            </div>
-
-          ) : publicacionesFiltradas.length === 0 ? (
-
-            <div className="empty-state">
-
-              <div className="empty-icon">
-                📭
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: "600", display: "block", marginBottom: "6px" }}>Foto / Imagen (Opcional)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={guardandoPublicacion}
+                  onChange={(e) => {
+                    const arch = e.target.files?.[0];
+                    if (!arch) return;
+                    setArchivoFoto(arch);
+                    setPreviewFoto(URL.createObjectURL(arch));
+                  }}
+                  style={{ width: "100%", fontSize: "13px", color: "var(--text-muted)" }}
+                />
               </div>
-
-              <h3>
-                No encontramos publicaciones
-              </h3>
-
-              <p>
-                Probá con otra búsqueda.
-              </p>
-
             </div>
 
-          ) : (
+            <label style={{ fontSize: "13px", fontWeight: "600", display: "block", marginBottom: "6px" }}>Descripción del servicio o propuesta</label>
+            <textarea
+              value={contenidoNuevo}
+              onChange={(e) => setContenidoNuevo(e.target.value)}
+              placeholder="Describí con detalle qué trabajo realizás, tu disponibilidad o qué reparación necesitás..."
+              required
+              rows={3}
+              disabled={guardandoPublicacion}
+              style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--surface-soft)", color: "var(--text)", marginBottom: "14px", boxSizing: "border-box" }}
+            />
 
-            <div className="publication-grid">
+            {previewFoto && (
+              <div style={{ marginBottom: "14px" }}>
+                <img src={previewFoto} alt="Vista previa" style={{ maxHeight: "160px", borderRadius: "8px", objectFit: "cover" }} />
+                <button type="button" onClick={() => { setArchivoFoto(null); setPreviewFoto(""); }} style={{ display: "block", fontSize: "12px", color: "#dc2626", background: "none", border: "none", cursor: "pointer", marginTop: "4px" }}>
+                  ✕ Quitar imagen
+                </button>
+              </div>
+            )}
 
-              {publicacionesFiltradas.map(
-                (publicacion) => (
+            {errorFormulario && <p style={{ color: "#dc2626", fontSize: "14px", marginBottom: "12px" }}>{errorFormulario}</p>}
+            {mensajeFormulario && <p style={{ color: "#16a34a", fontSize: "14px", marginBottom: "12px" }}>{mensajeFormulario}</p>}
 
-                  <article
-                    className="publication-card"
-                    key={publicacion.id}
-                  >
+            <button type="submit" className="btn-primary" disabled={guardandoPublicacion} style={{ padding: "10px 24px" }}>
+              {guardandoPublicacion ? "Guardando publicación..." : "Publicar Anuncio"}
+            </button>
+          </form>
+        </div>
 
-                    <div className="publication-header">
+        {/* LISTADO DE PUBLICACIONES ENRIQUECIDAS */}
+        {cargando ? (
+          <p style={{ textAlign: "center", padding: "60px 0", color: "var(--text-muted)" }}>Cargando publicaciones verificadas...</p>
+        ) : error ? (
+          <p style={{ textAlign: "center", color: "#dc2626", padding: "40px" }}>{error}</p>
+        ) : publicacionesFiltradas.length === 0 ? (
+          /* ESTADO VACÍO PROFESIONAL */
+          <div className="empty-results-box">
+            <span className="empty-results-icon">🔍</span>
+            <h3 className="empty-results-title">No encontramos publicaciones para tu búsqueda</h3>
+            <p className="empty-results-desc">
+              No hay publicaciones que coincidan con "{busqueda || categoriaActiva}". Probá cambiando los términos de búsqueda o explorá otras categorías.
+            </p>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => { setBusqueda(""); setCategoriaActiva("Todos"); setFiltroTipo("Todos"); }}
+            >
+              Ver todas las publicaciones
+            </button>
+          </div>
+        ) : (
+          <div className="publication-grid">
+            {publicacionesFiltradas.map((pub) => {
+              const imagenCard = obtenerImagenPublicacion(pub);
+              const esEmpresa = /empresa|contrat|vacante/i.test(`${pub.tipo || ""} ${pub.contenido || ""}`);
+              const esEmpleo = /empleo|trabajo|busco trabajo/i.test(`${pub.tipo || ""} ${pub.contenido || ""}`);
 
-                      <div className="publication-avatar">
-                        {(publicacion.autor || "U")
-                          .charAt(0)
-                          .toUpperCase()}
+              return (
+                <article className="publication-card-enhanced" key={pub.id}>
+                  {/* FOTO DE PORTADA CON IMAGEN CURADA O SUBIDA */}
+                  <div className="card-cover-container">
+                    <img
+                      src={imagenCard}
+                      alt={pub.contenido || "Publicación"}
+                      className="card-cover-img"
+                      loading="lazy"
+                    />
+                    <span className={`card-badge-floating ${esEmpresa ? "empresa" : esEmpleo ? "empleo" : "servicio"}`}>
+                      {pub.tipo || "Servicio"}
+                    </span>
+                  </div>
+
+                  <div style={{ padding: "20px", display: "flex", flexDirection: "column", flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+                      <div className="publication-avatar" style={{ width: "38px", height: "38px", borderRadius: "50%", background: "var(--primary-gradient)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700" }}>
+                        {(pub.autor || "U").charAt(0).toUpperCase()}
                       </div>
-
                       <div>
-
-                        <strong>
-                          {publicacion.autor ||
-                            "Usuario"}
-                        </strong>
-
-                        <span>
-                          {publicacion.fecha
-                            ? new Date(
-                                publicacion.fecha
-                              ).toLocaleDateString(
-                                "es-AR"
-                              )
-                            : "Reciente"}
+                        <strong style={{ display: "block", fontSize: "14px", color: "var(--text)" }}>{pub.autor || "Usuario"}</strong>
+                        <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                          {pub.fecha ? new Date(pub.fecha).toLocaleDateString("es-AR") : "Reciente"}
                         </span>
-
                       </div>
-
                     </div>
 
+                    <h3 style={{ fontSize: "16px", color: "var(--text)", margin: "0 0 10px", lineHeight: "1.4", flex: 1 }}>
+                      {pub.contenido || "Nuevo servicio disponible"}
+                    </h3>
 
-                    <div className="publication-body">
+                    {pub.ubicacion && (
+                      <p style={{ fontSize: "13px", color: "var(--text-muted)", margin: "0 0 16px" }}>
+                        📍 {pub.ubicacion}
+                      </p>
+                    )}
 
+                    {/* BOTONES DE ACCIÓN */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", borderTop: "1px solid var(--border)", paddingTop: "14px" }}>
+                      <button
+                        type="button"
+                        className="contact-button"
+                        disabled={!!procesandoInteres[pub.id]}
+                        onClick={() => manejarMeGusta(pub)}
+                        style={{ fontSize: "13px", padding: "8px 10px" }}
+                      >
+                        ❤️ Me interesa ({cantidadesInteres[pub.id] ?? pub.interesados ?? 0})
+                      </button>
 
-                      {publicacion.imagenBase64 && (
-                        <img
-                          src={publicacion.imagenBase64}
-                          alt="Imagen de la publicación"
-                          loading="lazy"
-                          style={{ display: "block", width: "100%", maxHeight: "320px", objectFit: "contain", borderRadius: "10px", marginBottom: "14px" }}
+                      <button
+                        type="button"
+                        className="contact-button"
+                        onClick={() => alternarComentarios(pub)}
+                        style={{ fontSize: "13px", padding: "8px 10px" }}
+                      >
+                        💬 Comentar ({comentariosPorPublicacion[pub.id]?.length ?? pub.comentarios ?? 0})
+                      </button>
+
+                      <button
+                        type="button"
+                        className="contact-button"
+                        onClick={() => {
+                          if (!usuario) { navigate("/login"); return; }
+                          setSolicitudTitulo("Presupuesto: " + (pub.contenido ? pub.contenido.slice(0, 45) + "..." : "Servicio"));
+                          setSolicitudCategoria(pub.tipo?.includes("Plomer") ? "Plomería" : pub.tipo?.includes("Pint") ? "Pintura" : "Electricidad");
+                          setSolicitudUbicacion(pub.ubicacion || "");
+                          setModalSolicitudAbierto(true);
+                        }}
+                        style={{ fontSize: "13px", padding: "8px 10px", gridColumn: "span 2", background: "var(--primary-light)", color: "var(--primary)", borderColor: "var(--primary)" }}
+                      >
+                        📋 Pedir Presupuesto
+                      </button>
+
+                      <button
+                        type="button"
+                        className="contact-button"
+                        onClick={() => {
+                          if (!usuario) { navigate("/login"); return; }
+                          const receptor = pub.autor;
+                          const emisor = identidadUsuario;
+                          if (receptor === emisor) { alert("No podés chatear con tu propia publicación."); return; }
+                          navigate("/mensajes", { state: { receptor } });
+                        }}
+                        style={{ fontSize: "13px", padding: "8px 10px", gridColumn: "span 2" }}
+                      >
+                        ✉️ Contactar por Chat
+                      </button>
+                    </div>
+
+                    {/* PANEL DE COMENTARIOS */}
+                    {comentariosAbiertos[pub.id] && (
+                      <div className="comments-panel" style={{ marginTop: "14px" }}>
+                        <div className="comments-list">
+                          {(comentariosPorPublicacion[pub.id] || []).map((c, i) => (
+                            <div key={c.id ?? i} className="comment-item">
+                              <strong>{c.autor || c.usuario || "Usuario"}</strong>
+                              <p>{c.contenido || c.texto || ""}</p>
+                            </div>
+                          ))}
+                          {comentariosPorPublicacion[pub.id]?.length === 0 && (
+                            <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>Todavía no hay comentarios. ¡Sé el primero!</p>
+                          )}
+                        </div>
+                        <textarea
+                          value={comentarioNuevo[pub.id] || ""}
+                          onChange={(e) => setComentarioNuevo(prev => ({ ...prev, [pub.id]: e.target.value }))}
+                          placeholder="Escribí tu consulta..."
+                          rows={2}
+                          style={{ width: "100%", margin: "8px 0", padding: "8px", borderRadius: "6px", border: "1px solid var(--border)" }}
                         />
-                      )}
-<span className="publication-type">
-                        {/empresa|contrat|busca personal|vacante/i.test(`${publicacion.tipo || ""} ${publicacion.contenido || ""}`)
-                          ? "EMPRESA · BUSCA PERSONAL"
-                          : /empleo|trabajo|postul|busco trabajo|se busca/i.test(`${publicacion.tipo || ""} ${publicacion.contenido || ""}`)
-                            ? "OPORTUNIDAD LABORAL"
-                            : "SERVICIO / OFICIO"}
-                      </span>
-
-                      <h3>
-                        {publicacion.contenido ||
-                          "Nueva publicación"}
-                      </h3>
-
-                      {publicacion.ubicacion && (
-
-                        <p className="location">
-                          📍 {publicacion.ubicacion}
-                        </p>
-
-                      )}
-
-                      {Array.isArray(
-                        publicacion.tags
-                      ) &&
-                        publicacion.tags.length > 0 && (
-
-                          <div className="tags">
-
-                            {publicacion.tags.map(
-                              (tag, index) => (
-
-                                <span key={index}>
-                                  #{tag}
-                                </span>
-
-                              )
-                            )}
-
-                          </div>
-
-                        )}
-
-                    </div>
-
-
-                    <div className="publication-footer">
-  <button
-    type="button"
-    className="contact-button"
-    disabled={!!procesandoInteres[publicacion.id]}
-    onClick={() => manejarMeGusta(publicacion)}
-  >
-    ❤️ Me interesa ({cantidadesInteres[publicacion.id] ?? publicacion.interesados ?? 0})
-  </button>
-
-  <button
-    type="button"
-    className="contact-button"
-    onClick={() => alternarComentarios(publicacion)}
-  >
-    💬 Comentarios ({comentariosPorPublicacion[publicacion.id]?.length ?? publicacion.comentarios ?? 0})
-  </button>
-
-  <button
-    type="button"
-    className="contact-button"
-    onClick={() => {
-      if (!usuario) {
-        navigate("/login");
-        return;
-      }
-      const receptor = publicacion.autor;
-      const emisor = usuario.nombre || usuario.email || usuario.username || usuario.nombreUsuario;
-      if (!receptor || !emisor) {
-        alert("No se pudo identificar a los usuarios de la conversación.");
-        return;
-      }
-      if (receptor === emisor) {
-        alert("No podés iniciar una conversación con tu propia publicación.");
-        return;
-      }
-      navigate("/mensajes", { state: { receptor } });
-    }}
-  >
-    Contactar
-  </button>
-
-  {comentariosAbiertos[publicacion.id] && (
-    <div className="comments-panel">
-      <div className="comments-list">
-        {(comentariosPorPublicacion[publicacion.id] || []).map((comentario, indice) => (
-          <div key={comentario.id ?? indice} className="comment-item">
-            <strong>{comentario.autor || comentario.usuario || "Usuario"}</strong>
-            <p>{comentario.contenido || comentario.texto || ""}</p>
+                        <button
+                          type="button"
+                          className="contact-button"
+                          disabled={!!procesandoComentario[pub.id]}
+                          onClick={() => enviarComentario(pub)}
+                        >
+                          {procesandoComentario[pub.id] ? "Enviando..." : "Publicar comentario"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
           </div>
-        ))}
-        {comentariosPorPublicacion[publicacion.id]?.length === 0 && (
-          <p>Todavía no hay comentarios.</p>
         )}
-      </div>
-      <textarea
-        value={comentarioNuevo[publicacion.id] || ""}
-        onChange={(evento) => setComentarioNuevo(prev => ({
-          ...prev, [publicacion.id]: evento.target.value
-        }))}
-        placeholder="Escribí un comentario..."
-        rows={2}
-      />
-      <button
-        type="button"
-        className="contact-button"
-        disabled={!!procesandoComentario[publicacion.id]}
-        onClick={() => enviarComentario(publicacion)}
-      >
-        {procesandoComentario[publicacion.id] ? "Enviando..." : "Publicar comentario"}
-      </button>
-    </div>
-  )}
-</div>
 
-                  </article>
-
-                )
-              )}
-
-            </div>
-
-          )}
-
-        </section>
-
-
-        {/* COMO FUNCIONA */}
-
-        <section
-          id="como-funciona"
-          className="how-section"
-        >
-
-          <div className="section-heading centered">
-
-            <span className="eyebrow">
-              SIMPLE Y RÁPIDO
-            </span>
-
-            <h2>
-              ¿Cómo funciona?
-            </h2>
-
-            <p>
-              Encontrá ayuda o conseguí nuevos
-              clientes en pocos pasos.
-            </p>
-
+        {/* BOTÓN CARGAR MÁS PUBLICACIONES */}
+        {hayMasPaginas && (
+          <div style={{ textAlign: "center", margin: "36px 0" }}>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={cargarMasPublicaciones}
+              disabled={cargandoMas}
+              style={{ padding: "12px 30px", fontSize: "15px" }}
+            >
+              {cargandoMas ? "Cargando más..." : "⬇️ Cargar más publicaciones"}
+            </button>
           </div>
+        )}
+      </section>
 
-
-          <div className="steps">
-
-            <div className="step">
-
-              <div className="step-number">
-                01
-              </div>
-
-              <div className="step-icon">
-                🔎
-              </div>
-
-              <h3>
-                Buscá
-              </h3>
-
-              <p>
-                Encontrá el servicio que necesitás.
-              </p>
-
-            </div>
-
-
-            <div className="step">
-
-              <div className="step-number">
-                02
-              </div>
-
-              <div className="step-icon">
-                👤
-              </div>
-
-              <h3>
-                Conocé
-              </h3>
-
-              <p>
-                Revisá perfiles y experiencia.
-              </p>
-
-            </div>
-
-
-            <div className="step">
-
-              <div className="step-number">
-                03
-              </div>
-
-              <div className="step-icon">
-                💬
-              </div>
-
-              <h3>
-                Contactá
-              </h3>
-
-              <p>
-                Comunicate con el profesional.
-              </p>
-
-            </div>
-
-
-            <div className="step">
-
-              <div className="step-number">
-                04
-              </div>
-
-              <div className="step-icon">
-                ⭐
-              </div>
-
-              <h3>
-                Valorá
-              </h3>
-
-              <p>
-                Compartí tu experiencia.
-              </p>
-
-            </div>
-
-          </div>
-
-        </section>
-
-
-        {/* CTA */}
-
-        <section className="cta">
-
-          <div>
-
-            <span className="eyebrow">
-              ¿TENÉS UN OFICIO?
-            </span>
-
-            <h2>
-              Mostrá lo que sabés hacer.
-            </h2>
-
-            <p>
-              Creá tu perfil, publicá tus servicios
-              y encontrá nuevas oportunidades.
-            </p>
-
-          </div>
-
-
-          <button
-            className="btn-light"
-            onClick={() =>
-              navigate("/registro")
-            }
-          >
-            Empezar ahora →
-          </button>
-
-        </section>
-
-      </main>
-
-
-            {/* MODAL SOLICITUD DE PRESUPUESTO (HU-15) */}
+      {/* MODAL SOLICITUD DE PRESUPUESTO (HU-15) */}
       {modalSolicitudAbierto && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: "16px" }}>
-          <div style={{ background: "#fff", borderRadius: "14px", maxWidth: "520px", width: "100%", padding: "24px", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 10px 25px rgba(0,0,0,0.2)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h3 style={{ margin: 0, color: "#1e293b" }}>ðŸ“‹ Solicitar Presupuesto / Trabajo</h3>
-              <button type="button" onClick={() => setModalSolicitudAbierto(false)} style={{ background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "#64748b" }}>âœ•</button>
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: "16px" }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", maxWidth: "520px", width: "100%", padding: "26px", maxHeight: "90vh", overflowY: "auto", boxShadow: "var(--shadow-lg)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
+              <h3 style={{ margin: 0, color: "var(--text)", fontSize: "20px" }}>📋 Solicitar Presupuesto Formal</h3>
+              <button type="button" onClick={() => setModalSolicitudAbierto(false)} style={{ background: "none", border: "none", fontSize: "22px", cursor: "pointer", color: "var(--text-muted)" }}>✕</button>
             </div>
 
             <form onSubmit={enviarSolicitudPresupuesto}>
-              <label style={{ display: "block", marginBottom: "6px", fontWeight: "600", fontSize: "14px" }}>TÃ­tulo del trabajo requerido</label>
+              <label style={{ display: "block", marginBottom: "6px", fontWeight: "600", fontSize: "13px" }}>Título del trabajo solicitado</label>
               <input
                 type="text"
                 value={solicitudTitulo}
                 onChange={(e) => setSolicitudTitulo(e.target.value)}
-                placeholder="Ej.: Arreglo de pÃ©rdida de agua en baÃ±o"
+                placeholder="Ej.: Reparación de instalación eléctrica en cocina"
                 required
                 maxLength={180}
-                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", marginBottom: "14px", boxSizing: "border-box" }}
+                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--surface-soft)", color: "var(--text)", marginBottom: "14px", boxSizing: "border-box" }}
               />
 
-              <label style={{ display: "block", marginBottom: "6px", fontWeight: "600", fontSize: "14px" }}>Rubro / Oficio</label>
-              <select
-                value={solicitudCategoria}
-                onChange={(e) => setSolicitudCategoria(e.target.value)}
-                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", marginBottom: "14px", boxSizing: "border-box" }}
-              >
-                {categorias.map((cat, i) => (
-                  <option key={i} value={cat.nombre}>{cat.nombre}</option>
-                ))}
-              </select>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
+                <div>
+                  <label style={{ display: "block", marginBottom: "6px", fontWeight: "600", fontSize: "13px" }}>Rubro / Oficio</label>
+                  <select
+                    value={solicitudCategoria}
+                    onChange={(e) => setSolicitudCategoria(e.target.value)}
+                    style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--surface-soft)", color: "var(--text)" }}
+                  >
+                    {categorias.map(cat => (
+                      <option key={cat.nombre} value={cat.nombre}>{cat.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: "block", marginBottom: "6px", fontWeight: "600", fontSize: "13px" }}>Presupuesto Estimado ($)</label>
+                  <input
+                    type="number"
+                    value={solicitudPresupuesto}
+                    onChange={(e) => setSolicitudPresupuesto(e.target.value)}
+                    placeholder="Ej: 25000"
+                    style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--surface-soft)", color: "var(--text)" }}
+                  />
+                </div>
+              </div>
 
-              <label style={{ display: "block", marginBottom: "6px", fontWeight: "600", fontSize: "14px" }}>UbicaciÃ³n / Zona</label>
+              <label style={{ display: "block", marginBottom: "6px", fontWeight: "600", fontSize: "13px" }}>Ubicación / Barrio</label>
               <input
                 type="text"
                 value={solicitudUbicacion}
                 onChange={(e) => setSolicitudUbicacion(e.target.value)}
-                placeholder="Ej.: Barrio Alberdi, CÃ³rdoba"
+                placeholder="Ej.: Barrio General Paz, Córdoba"
                 maxLength={150}
-                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", marginBottom: "14px", boxSizing: "border-box" }}
+                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--surface-soft)", color: "var(--text)", marginBottom: "14px", boxSizing: "border-box" }}
               />
 
-              <label style={{ display: "block", marginBottom: "6px", fontWeight: "600", fontSize: "14px" }}>Presupuesto estimado (opcional en $)</label>
-              <input
-                type="number"
-                value={solicitudPresupuesto}
-                onChange={(e) => setSolicitudPresupuesto(e.target.value)}
-                placeholder="Ej.: 15000"
-                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", marginBottom: "14px", boxSizing: "border-box" }}
-              />
-
-              <label style={{ display: "block", marginBottom: "6px", fontWeight: "600", fontSize: "14px" }}>DescripciÃ³n detallada del problema o servicio</label>
+              <label style={{ display: "block", marginBottom: "6px", fontWeight: "600", fontSize: "13px" }}>Descripción del trabajo</label>
               <textarea
                 value={solicitudDescripcion}
                 onChange={(e) => setSolicitudDescripcion(e.target.value)}
-                placeholder="DetallÃ¡ los detalles del trabajo, horarios preferidos de visita o materiales necesarios..."
+                placeholder="Explicá con claridad qué se necesita arreglar o instalar..."
                 required
                 rows={4}
-                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", marginBottom: "14px", boxSizing: "border-box" }}
+                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--surface-soft)", color: "var(--text)", marginBottom: "16px", boxSizing: "border-box" }}
               />
 
-              {errorSolicitud && <p style={{ color: "#b42318", fontSize: "14px", margin: "0 0 12px" }}>{errorSolicitud}</p>}
-              {mensajeSolicitud && <p style={{ color: "#16803c", fontSize: "14px", margin: "0 0 12px" }}>{mensajeSolicitud}</p>}
+              {errorSolicitud && <p style={{ color: "#dc2626", fontSize: "14px", marginBottom: "12px" }}>{errorSolicitud}</p>}
+              {mensajeSolicitud && <p style={{ color: "#16a34a", fontSize: "14px", marginBottom: "12px" }}>{mensajeSolicitud}</p>}
 
               <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
-                <button type="button" onClick={() => setModalSolicitudAbierto(false)} style={{ padding: "10px 16px", borderRadius: "8px", border: "1px solid #cbd5e1", background: "#f8fafc", cursor: "pointer" }}>
+                <button type="button" onClick={() => setModalSolicitudAbierto(false)} style={{ padding: "10px 18px", borderRadius: "8px", border: "1px solid var(--border)", background: "transparent", color: "var(--text)" }}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn-primary" disabled={enviandoSolicitud} style={{ padding: "10px 20px" }}>
+                <button type="submit" className="btn-primary" disabled={enviandoSolicitud} style={{ padding: "10px 22px" }}>
                   {enviandoSolicitud ? "Enviando..." : "Enviar Solicitud"}
                 </button>
               </div>
@@ -2006,39 +993,39 @@ function Inicio() {
         </div>
       )}
 
-      {/* MODAL MIS SOLICITUDES (HU-15) */}
+      {/* MODAL MIS SOLICITUDES */}
       {modalMisSolicitudes && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: "16px" }}>
-          <div style={{ background: "#fff", borderRadius: "14px", maxWidth: "600px", width: "100%", padding: "24px", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 10px 25px rgba(0,0,0,0.2)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h3 style={{ margin: 0, color: "#1e293b" }}>ðŸ“‹ Mis Solicitudes de Presupuesto</h3>
-              <button type="button" onClick={() => setModalMisSolicitudes(false)} style={{ background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "#64748b" }}>âœ•</button>
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: "16px" }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", maxWidth: "600px", width: "100%", padding: "26px", maxHeight: "90vh", overflowY: "auto", boxShadow: "var(--shadow-lg)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
+              <h3 style={{ margin: 0, color: "var(--text)", fontSize: "20px" }}>📋 Mis Solicitudes de Presupuesto</h3>
+              <button type="button" onClick={() => setModalMisSolicitudes(false)} style={{ background: "none", border: "none", fontSize: "22px", cursor: "pointer", color: "var(--text-muted)" }}>✕</button>
             </div>
 
             {cargandoSolicitudes ? (
-              <p style={{ textAlign: "center", padding: "20px" }}>Cargando solicitudes...</p>
+              <p style={{ textAlign: "center", padding: "30px", color: "var(--text-muted)" }}>Cargando solicitudes...</p>
             ) : misSolicitudes.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "30px", color: "#64748b" }}>
-                <p>TodavÃ­a no enviaste ninguna solicitud de presupuesto.</p>
-                <button type="button" className="btn-primary" onClick={() => { setModalMisSolicitudes(false); setModalSolicitudAbierto(true); }} style={{ marginTop: "10px" }}>
+              <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--text-muted)" }}>
+                <p>Todavía no enviaste ninguna solicitud de presupuesto.</p>
+                <button type="button" className="btn-primary" onClick={() => { setModalMisSolicitudes(false); setModalSolicitudAbierto(true); }} style={{ marginTop: "12px" }}>
                   Crear primera solicitud
                 </button>
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {misSolicitudes.map((sol) => (
-                  <div key={sol.id} style={{ border: "1px solid #e2e8f0", borderRadius: "10px", padding: "14px", background: "#f8fafc" }}>
+                {misSolicitudes.map(sol => (
+                  <div key={sol.id} style={{ border: "1px solid var(--border)", borderRadius: "10px", padding: "14px", background: "var(--surface-soft)" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                      <strong style={{ fontSize: "16px", color: "#0f172a" }}>{sol.titulo}</strong>
-                      <span style={{ fontSize: "12px", fontWeight: "700", padding: "3px 8px", borderRadius: "6px", background: sol.estado === "ACEPTADA" ? "#dcfce7" : sol.estado === "RECHAZADA" ? "#fee2e2" : "#fef9c3", color: sol.estado === "ACEPTADA" ? "#166534" : sol.estado === "RECHAZADA" ? "#991b1b" : "#854d0e" }}>
+                      <strong style={{ fontSize: "15px", color: "var(--text)" }}>{sol.titulo}</strong>
+                      <span style={{ fontSize: "11px", fontWeight: "700", padding: "3px 8px", borderRadius: "6px", background: sol.estado === "ACEPTADA" ? "#dcfce7" : sol.estado === "RECHAZADA" ? "#fee2e2" : "#fef9c3", color: sol.estado === "ACEPTADA" ? "#166534" : sol.estado === "RECHAZADA" ? "#991b1b" : "#854d0e" }}>
                         {sol.estado || "PENDIENTE"}
                       </span>
                     </div>
-                    <p style={{ margin: "4px 0", color: "#475569", fontSize: "14px" }}>{sol.descripcion}</p>
-                    <div style={{ display: "flex", gap: "14px", fontSize: "12px", color: "#64748b", marginTop: "8px" }}>
-                      {sol.categoria && <span>ðŸ”§ {sol.categoria}</span>}
-                      {sol.ubicacion && <span>ðŸ“ {sol.ubicacion}</span>}
-                      {sol.presupuesto && <span>ðŸ’° Estimado: ${sol.presupuesto}</span>}
+                    <p style={{ margin: "4px 0", color: "var(--text-secondary)", fontSize: "13px" }}>{sol.descripcion}</p>
+                    <div style={{ display: "flex", gap: "14px", fontSize: "12px", color: "var(--text-muted)", marginTop: "6px" }}>
+                      {sol.categoria && <span>🔧 {sol.categoria}</span>}
+                      {sol.ubicacion && <span>📍 {sol.ubicacion}</span>}
+                      {sol.presupuesto && <span>💰 Estimado: ${sol.presupuesto}</span>}
                     </div>
                   </div>
                 ))}
@@ -2049,101 +1036,201 @@ function Inicio() {
       )}
 
       {/* FOOTER */}
-
-      <footer className="footer">
-
-        <div className="footer-inner">
-
-          <div className="footer-brand">
-
-            <div className="brand">
-
-              <div className="brand-logo">
-                PS
-              </div>
-
-              <div>
-
-                <strong>
-                  Plataforma
-                </strong>
-
-                <span>
-                  Servicios & Oficios
-                </span>
-
-              </div>
-
-            </div>
-
-            <p>
-              Conectamos personas,
-              profesionales y oportunidades.
-            </p>
-
-          </div>
-
-
-          <div className="footer-links">
-
-            <div>
-
-              <strong>
-                Plataforma
-              </strong>
-
-              <a href="#servicios">
-                Servicios
-              </a>
-
-              <a href="#publicaciones">
-                Publicaciones
-              </a>
-
-              <a href="#como-funciona">
-                Cómo funciona
-              </a>
-
-            </div>
-
-            <div>
-
-              <strong>
-                Comunidad
-              </strong>
-
-              <a href="/login">
-                Iniciar sesión
-              </a>
-
-              <a href="/registro">
-                Crear cuenta
-              </a>
-
-            </div>
-
-          </div>
-
-        </div>
-
-
-        <div className="footer-bottom">
-
-          <span>
-            © 2026 Plataforma de Servicios y Oficios
-          </span>
-
-          <span>
-            React + Spring Boot + MariaDB
-          </span>
-
-        </div>
-
+      <footer className="footer" style={{ borderTop: "1px solid var(--border)", padding: "40px 20px", textAlign: "center", color: "var(--text-muted)", fontSize: "14px" }}>
+        <p>© 2026 ServiRed - Plataforma de Servicios & Oficios. Todos los derechos reservados.</p>
       </footer>
-
     </div>
   );
 }
 
+/* ============================================================
+   PANTALLA DE LOGIN
+============================================================ */
+function Login() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState("");
+
+  async function iniciarSesion(e) {
+    e.preventDefault();
+    setError("");
+    if (!email || !password) {
+      setError("Completá tu correo electrónico y contraseña.");
+      return;
+    }
+    try {
+      setCargando(true);
+      const response = await fetch(`${API}/usuarios/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+
+      if (response.status === 401) {
+        setError("El correo o la contraseña son incorrectos.");
+        return;
+      }
+      if (!response.ok) {
+        throw new Error("Error al iniciar sesión");
+      }
+      const data = await response.json();
+      localStorage.setItem("usuario", JSON.stringify(data));
+      navigate("/dashboard");
+    } catch (err) {
+      setError("No pudimos conectar con el servidor. Verificá que Spring Boot esté funcionando.");
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  return (
+    <div className="auth-page">
+      <div className="auth-card" style={{ maxWidth: "420px", margin: "60px auto", padding: "30px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-md)" }}>
+        <BotonVolver />
+        <h2 style={{ fontSize: "24px", margin: "16px 0 6px", color: "var(--text)" }}>Iniciar Sesión</h2>
+        <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "20px" }}>Ingresá a tu cuenta de ServiRed</p>
+
+        <form onSubmit={iniciarSesion}>
+          <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px" }}>Correo Electrónico</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="tu@email.com"
+            required
+            style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--surface-soft)", color: "var(--text)", marginBottom: "14px", boxSizing: "border-box" }}
+          />
+
+          <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px" }}>Contraseña</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            required
+            style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--surface-soft)", color: "var(--text)", marginBottom: "18px", boxSizing: "border-box" }}
+          />
+
+          {error && <p style={{ color: "#dc2626", fontSize: "13px", marginBottom: "14px" }}>{error}</p>}
+
+          <button type="submit" className="btn-primary" disabled={cargando} style={{ width: "100%", padding: "12px", fontSize: "15px" }}>
+            {cargando ? "Iniciando..." : "Ingresar"}
+          </button>
+        </form>
+
+        <p style={{ textAlign: "center", fontSize: "14px", color: "var(--text-muted)", marginTop: "20px" }}>
+          ¿No tenés una cuenta? <Link to="/registro" style={{ color: "var(--primary)", fontWeight: "600" }}>Registrate acá</Link>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   PANTALLA DE REGISTRO
+============================================================ */
+function Registro() {
+  const navigate = useNavigate();
+  const [nombre, setNombre] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState("");
+  const [exito, setExito] = useState("");
+
+  async function registrar(e) {
+    e.preventDefault();
+    setError("");
+    setExito("");
+    if (!nombre || !email || !password) {
+      setError("Por favor completá todos los campos.");
+      return;
+    }
+    if (password.length < 6) {
+      setError("La contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
+
+    try {
+      setCargando(true);
+      const res = await fetch(`${API}/usuarios`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre, email, password })
+      });
+
+      if (res.status === 409) {
+        setError("Ese correo electrónico ya está registrado.");
+        return;
+      }
+      if (!res.ok) {
+        const det = await res.text();
+        throw new Error(det || "Error al registrarse");
+      }
+
+      setExito("¡Cuenta creada correctamente! Redirigiendo al inicio de sesión...");
+      setTimeout(() => navigate("/login"), 2000);
+    } catch (err) {
+      setError(err.message || "No se pudo crear la cuenta.");
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  return (
+    <div className="auth-page">
+      <div className="auth-card" style={{ maxWidth: "440px", margin: "60px auto", padding: "30px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-md)" }}>
+        <BotonVolver />
+        <h2 style={{ fontSize: "24px", margin: "16px 0 6px", color: "var(--text)" }}>Crear una Cuenta</h2>
+        <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "20px" }}>Unite a la mayor comunidad de servicios y oficios</p>
+
+        <form onSubmit={registrar}>
+          <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px" }}>Nombre Completo o Empresa</label>
+          <input
+            type="text"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            placeholder="Ej.: Juan Pérez"
+            required
+            style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--surface-soft)", color: "var(--text)", marginBottom: "14px", boxSizing: "border-box" }}
+          />
+
+          <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px" }}>Correo Electrónico</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="tu@email.com"
+            required
+            style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--surface-soft)", color: "var(--text)", marginBottom: "14px", boxSizing: "border-box" }}
+          />
+
+          <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px" }}>Contraseña (mínimo 6 caracteres)</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            required
+            style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--surface-soft)", color: "var(--text)", marginBottom: "18px", boxSizing: "border-box" }}
+          />
+
+          {error && <p style={{ color: "#dc2626", fontSize: "13px", marginBottom: "14px" }}>{error}</p>}
+          {exito && <p style={{ color: "#16a34a", fontSize: "13px", marginBottom: "14px" }}>{exito}</p>}
+
+          <button type="submit" className="btn-primary" disabled={cargando} style={{ width: "100%", padding: "12px", fontSize: "15px" }}>
+            {cargando ? "Creando cuenta..." : "Registrarme"}
+          </button>
+        </form>
+
+        <p style={{ textAlign: "center", fontSize: "14px", color: "var(--text-muted)", marginTop: "20px" }}>
+          ¿Ya tenés una cuenta? <Link to="/login" style={{ color: "var(--primary)", fontWeight: "600" }}>Iniciá sesión</Link>
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export default App;
