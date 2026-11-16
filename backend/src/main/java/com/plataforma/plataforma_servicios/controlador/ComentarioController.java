@@ -53,6 +53,7 @@ public class ComentarioController {
             return ResponseEntity.notFound().build();
         }
 
+        repository.deleteByComentarioPadreId(id);
         repository.deleteById(id);
         return ResponseEntity.noContent().build();
     }

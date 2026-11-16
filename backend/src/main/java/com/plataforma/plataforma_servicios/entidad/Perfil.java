@@ -18,7 +18,7 @@ public class Perfil implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long idPerfil;
 
-    @Column(name = "foto_perfil", length = 500)
+    @Column(name = "foto_perfil", columnDefinition = "LONGTEXT")
     private String fotoPerfil;
 
     @Column(name = "oficio", length = 150)
