@@ -1,74 +1,119 @@
-# Plataforma Conecta Empleo
+# Plataforma de Servicios y Oficios Profesionales
 
-Aplicación web para conectar postulantes y empresas, administrar perfiles, publicar ofertas y mantener conversaciones.
+Sistema integral de intermediación para la contratación de servicios y oficios profesionales. Conecta clientes y empresas con especialistas certificados, integrando perfiles laborales, portafolios de trabajo, mensajería en tiempo real y evaluaciones de calidad.
 
-## Estado del proyecto
+El proyecto está construido bajo una arquitectura cliente-servidor desacoplada (Frontend en React + Backend en Spring Boot) estructurada de forma modular, siguiendo los estándares de diseño y documentación del proyecto de referencia **Odonto**.
 
-Este repositorio contiene un prototipo académico en evolución. Cuenta con una arquitectura separada en `backend/` (Spring Boot) y `frontend/` (React + Vite).
+---
 
-## Tecnologías
+## Equipo de Desarrollo
 
-- **Backend:** Java 17, Spring Boot, Spring Data JPA / Hibernate, MySQL o MariaDB, Maven Wrapper
-- **Frontend:** React, Vite, JavaScript, CSS3
+* **Iris De Dominicis**
+* **Kevin Farías**
+* **Mateo Cuello**
+* **Josue Chimbo**
 
-## Requisitos
+---
 
-- JDK 17
-- Node.js (versión 18+ recomendada)
-- MySQL o MariaDB disponible localmente
+## Stack Tecnológico
 
-## Configuración local
+### Backend
+* **Java 17 LTS**
+* **Spring Boot** (Spring Web MVC, Spring Data JPA, Spring Security, Bean Validation)
+* **Maven Wrapper** (`mvnw` / `mvnw.cmd`)
+* **MySQL 8.0**
+* **Lombok**
 
-1. Crear una base de datos llamada `plataforma_servicios`.
-2. Configurar la conexión y las credenciales de la base de datos en `backend/src/main/resources/application.properties` (puedes tomar como base `application.properties.example`).
-3. Iniciar el backend:
-   ```powershell
-   cd backend
-   .\mvnw.cmd spring-boot:run
-   ```
-4. Iniciar el frontend:
-   ```powershell
-   cd frontend
-   npm install
-   npm run dev
-   ```
-   *(También puedes utilizar el script automatizado `.\iniciar-plataforma.ps1`)*
+### Frontend
+* **React 19**
+* **Vite 8**
+* **React Router 7**
+* **CSS3 Modular y Variables Nativas**
 
-5. Abrir en el navegador:
-   - Frontend: `http://localhost:5173/`
-   - Backend API: `http://localhost:8080/`
+---
 
-## API disponible
+## Inicio Rápido
 
-### Usuarios
+### Método 1: Un solo clic (Recomendado en Windows)
+En la raíz del proyecto, ejecuta con doble clic:
 
-Base URL: `/api/usuarios`
+```text
+ARRANCAR.bat
+```
+Este script verifica MySQL, arranca frontend (puerto 5174) y backend (puerto 8085) en ventanas independientes y abre el navegador automáticamente en `http://localhost:5174`. Para detener todo con un clic, ejecuta `DETENER.bat`.
 
-| Método | Ruta | Descripción |
-|---|---|---|
-| GET | `/api/usuarios` | Lista usuarios |
-| POST | `/api/usuarios` | Registra un usuario |
-| POST | `/api/usuarios/login` | Inicia sesión |
-| PUT | `/api/usuarios/{id}` | Actualiza nombre, correo y contraseña |
-| DELETE | `/api/usuarios/{id}` | Elimina un usuario |
+### Método 2: Inicio por línea de comandos
 
-### Mensajes
+#### Backend:
+```powershell
+cd backend
+.\mvnw.cmd spring-boot:run
+```
 
-Base URL: `/api/mensajes`
+#### Frontend:
+```powershell
+cd frontend
+npm run dev
+```
 
-| Método | Ruta | Descripción |
-|---|---|---|
-| POST | `/api/mensajes` | Guarda un mensaje |
-| GET | `/api/mensajes/chat?usuario={usuario}&empresa={empresa}` | Recupera mensajes entre dos participantes |
+---
 
-## Estructura principal
+## Estructura del Proyecto (Inspirada en Odonto)
 
-- `backend/`: API REST Spring Boot (controladores, entidades, repositorios y servicios).
-- `frontend/`: Interfaz de usuario en React + Vite (páginas de inicio, login, registro, perfiles, publicaciones y mensajes).
+```text
+PROYECTO_PLATAFORMA_SERVICIOS/
+├── ARRANCAR.bat                 # Lanzador universal con 1 solo clic
+├── DETENER.bat                  # Detención limpia de procesos y puertos
+├── iniciar-plataforma.ps1       # Script avanzado PowerShell con rutas dinámicas
+├── README.md                    # Documento principal del proyecto
+│
+├── docs/                        # Documentación técnica de arquitectura (Estilo Odonto)
+│   ├── arquitectura-backend.md  # Decisiones técnicas, endpoints y diseño modular
+│   ├── integracion-frontend.md  # Contratos API, flujo HTTP y desacoplamiento
+│   └── guia-arranque-rapido.md  # Manual paso a paso y solución de problemas
+│
+├── backend/                     # Servidor Spring Boot
+│   ├── mvnw / mvnw.cmd          # Maven Wrapper
+│   ├── pom.xml                  # Dependencias y configuración de compilación
+│   └── src/main/java/com/plataforma/plataforma_servicios/
+│       ├── PlataformaServiciosApplication.java
+│       ├── config/              # Seguridad, CORS y codificación de contraseñas
+│       ├── controlador/         # Endpoints REST (Health, Usuarios, Publicaciones, Servicios...)
+│       ├── dto/                 # Objetos de transferencia de datos
+│       ├── entidad/             # Modelos JPA mapeados a MySQL
+│       ├── repositorio/         # Repositorios Spring Data JPA
+│       ├── servicio/            # Lógica de negocio y casos de uso
+│       └── excepcion/           # Manejo global de excepciones
+│
+└── frontend/                    # Cliente Web React / Vite
+    ├── package.json             # Dependencias del frontend
+    ├── vite.config.js           # Configuración del servidor de desarrollo Vite
+    └── src/
+        ├── App.jsx              # Enrutador principal y componentes raíz
+        ├── components/          # Componentes reutilizables (Navbar, Sidebar, Modal...)
+        ├── pages/               # Vistas (Inicio, Servicios, Mensajes, Perfil...)
+        ├── services/            # Clientes HTTP hacia la API REST
+        └── styles/              # Hojas de estilo y temas CSS
+```
 
-## Colaboradores
+---
 
-- Iris
-- Kevin
-- Mateo
-- Josué
+## Módulos de Dominio (Modularidad Package-by-Feature)
+
+Al igual que los módulos clínicos de **Odonto** (`diagnostico`, `historia`, `tratamiento`), la plataforma se articula en torno a módulos de negocio clave:
+
+1. **Salud y Diagnóstico (`health`)**: Endpoint técnico `GET /api/health` para validación de disponibilidad del servicio.
+2. **Identidad y Usuarios (`usuario`)**: Registro, autenticación, perfiles profesionales y gestión de cuentas.
+3. **Muro y Publicaciones (`publicacion`)**: Publicaciones de solicitudes, requerimientos comunitarios y comentarios.
+4. **Catálogo de Servicios y Oficios (`servicio`)**: Ofertas de electricistas, plomeros, carpinteros, solicitudes y contrataciones.
+5. **Empresas y Empleo (`empresa`)**: Fichas de empresas contratantes, oportunidades laborales y postulaciones.
+6. **Mensajería en Tiempo Real (`mensaje`)**: Bandeja de entrada, hilos de chat y comunicación directa entre partes.
+7. **Calidad y Reputación (`calificacion`)**: Sistema de reseñas, puntuaciones y feedback de clientes.
+
+---
+
+## Documentación Detallada
+
+* [`docs/arquitectura-backend.md`](docs/arquitectura-backend.md): Especificación técnica del backend y migración a dominios.
+* [`docs/integracion-frontend.md`](docs/integracion-frontend.md): Guía de consumo de API y reglas de integración.
+* [`docs/guia-arranque-rapido.md`](docs/guia-arranque-rapido.md): Instrucciones completas de instalación y resolución de incidencias.
