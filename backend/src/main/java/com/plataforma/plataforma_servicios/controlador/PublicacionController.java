@@ -9,8 +9,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/publicaciones")
 @CrossOrigin(origins = "*")
@@ -48,6 +46,34 @@ public class PublicacionController {
     public ResponseEntity<Publicacion> crear(@RequestBody Publicacion publicacion) {
         Publicacion nueva = publicacionRepository.save(publicacion);
         return ResponseEntity.status(HttpStatus.CREATED).body(nueva);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Publicacion> actualizar(
+            @PathVariable Long id,
+            @RequestBody Publicacion datos) {
+
+        return publicacionRepository.findById(id)
+                .map(existente -> {
+                    if (datos.getAutor() != null && !datos.getAutor().isBlank()) {
+                        existente.setAutor(datos.getAutor());
+                    }
+                    if (datos.getTipo() != null && !datos.getTipo().isBlank()) {
+                        existente.setTipo(datos.getTipo());
+                    }
+                    if (datos.getUbicacion() != null) {
+                        existente.setUbicacion(datos.getUbicacion());
+                    }
+                    if (datos.getContenido() != null && !datos.getContenido().isBlank()) {
+                        existente.setContenido(datos.getContenido());
+                    }
+                    if (datos.getTags() != null) {
+                        existente.setTags(datos.getTags());
+                    }
+                    existente.setImagenBase64(datos.getImagenBase64());
+                    return ResponseEntity.ok(publicacionRepository.save(existente));
+                })
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")

@@ -15,7 +15,7 @@ public class Portafolio {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(length = 500)
+    @Column(columnDefinition = "LONGTEXT")
     private String imagenUrl;
 
     @Column(length = 200)

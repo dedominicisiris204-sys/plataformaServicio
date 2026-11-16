@@ -148,7 +148,7 @@
   font-size: clamp(42px, 5vw, 68px);
   line-height: 1.04;
   letter-spacing: -3px;
-  color: var(--secondary);
+  color: var(--text);
 }
 
 .hero h1 span {
@@ -165,7 +165,7 @@
 .hero-search {
   max-width: 620px;
   height: 64px;
-  background: white;
+  background: var(--surface-card);
   border: 1px solid var(--border);
   border-radius: 15px;
   display: flex;
@@ -184,6 +184,7 @@
   border: 0;
   outline: 0;
   padding: 0 15px;
+  background: transparent;
   color: var(--text);
 }
 
@@ -213,7 +214,7 @@
 
 .popular button {
   border: 1px solid var(--border);
-  background: white;
+  background: var(--surface-card);
   color: var(--text-secondary);
   border-radius: 30px;
   padding: 6px 11px;
@@ -232,7 +233,7 @@
   width: 360px;
   height: 360px;
   border-radius: 50%;
-  background: #dbeafe;
+  background: var(--primary-light);
   filter: blur(1px);
 }
 
@@ -241,7 +242,7 @@
   z-index: 2;
   width: 310px;
   padding: 27px;
-  background: white;
+  background: var(--surface-card);
   border: 1px solid var(--border);
   border-radius: 25px;
   box-shadow: var(--shadow-lg);
@@ -273,13 +274,14 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: #dbeafe;
+  background: var(--primary-light);
   font-size: 45px;
 }
 
 .main-card h3 {
   margin-top: 16px;
   font-size: 18px;
+  color: var(--text);
 }
 
 .main-card p {
@@ -312,7 +314,7 @@
 .floating-card {
   position: absolute;
   z-index: 3;
-  background: white;
+  background: var(--surface-card);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-md);
   border-radius: 15px;
@@ -368,7 +370,8 @@
 .stats {
   width: min(1180px, calc(100% - 40px));
   margin: 0 auto 80px;
-  background: var(--secondary);
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  border: 1px solid var(--border);
   color: white;
   border-radius: 22px;
   padding: 28px 35px;
@@ -424,7 +427,7 @@
 .section h2 {
   font-size: 32px;
   letter-spacing: -1px;
-  color: var(--secondary);
+  color: var(--text);
 }
 
 .section-heading p {
@@ -449,7 +452,7 @@
   min-height: 155px;
   text-align: left;
   padding: 21px;
-  background: white;
+  background: var(--surface-card);
   border: 1px solid var(--border);
   border-radius: 16px;
   transition: 0.2s;
@@ -463,7 +466,8 @@
 }
 
 .category-card.active {
-  background: #eff6ff;
+  background: var(--primary-light);
+  border-color: var(--primary);
 }
 
 .category-icon {
@@ -480,6 +484,7 @@
 .category-card strong {
   display: block;
   font-size: 15px;
+  color: var(--text);
 }
 
 .category-card span {
@@ -505,7 +510,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: white;
+  background: var(--surface-card);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 0 13px;
@@ -520,7 +525,7 @@
 .filter-bar select {
   min-width: 160px;
   border: 1px solid var(--border);
-  background: white;
+  background: var(--surface-card);
   border-radius: 10px;
   padding: 0 12px;
   color: var(--text-secondary);
@@ -529,7 +534,7 @@
 .refresh-button {
   width: 46px;
   border-radius: 10px;
-  background: white;
+  background: var(--surface-card);
   border: 1px solid var(--border);
   color: var(--primary);
   font-size: 22px;
@@ -542,7 +547,7 @@
 }
 
 .publication-card {
-  background: white;
+  background: var(--surface-card);
   border: 1px solid var(--border);
   border-radius: 17px;
   overflow: hidden;
@@ -568,7 +573,7 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: #dbeafe;
+  background: var(--primary-light);
   color: var(--primary);
   font-weight: 900;
 }
@@ -655,7 +660,7 @@
 .empty-state,
 .error-state {
   min-height: 270px;
-  background: white;
+  background: var(--surface-card);
   border: 1px solid var(--border);
   border-radius: 17px;
   display: flex;
@@ -699,7 +704,7 @@
 }
 
 .how-section {
-  background: white;
+  background: var(--surface-card);
   padding: 85px max(20px, calc((100vw - 1180px) / 2)) 90px;
 }
 
@@ -736,6 +741,7 @@
 
 .step h3 {
   font-size: 16px;
+  color: var(--text);
 }
 
 .step p {
@@ -772,7 +778,7 @@
 }
 
 .btn-light {
-  background: white;
+  background: var(--surface-card);
   color: var(--primary);
   padding: 13px 20px;
   border-radius: 10px;
@@ -853,7 +859,7 @@
   top: 51px;
   width: 200px;
   padding: 10px;
-  background: white;
+  background: var(--surface-card);
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: var(--shadow-lg);
@@ -898,7 +904,7 @@
 .modal {
   position: relative;
   width: min(420px, 100%);
-  background: white;
+  background: var(--surface-card);
   border-radius: 22px;
   padding: 35px;
   box-shadow: var(--shadow-lg);
@@ -941,7 +947,7 @@
 }
 
 .btn-outline {
-  background: white;
+  background: var(--surface-card);
   color: var(--primary);
   border: 1px solid #bfdbfe;
   padding: 11px 18px;

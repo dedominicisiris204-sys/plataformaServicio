@@ -11,20 +11,18 @@ public class Mensaje {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String emisor;    // QuiÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©n envÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­a (Ej. "Juan PÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©rez" o "Tech Solutions")
-    private String receptor;  // Quién recibe
+    private String emisor;
+    private String receptor;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "LONGTEXT")
     private String contenido;
 
     private LocalDateTime fechaEnvio;
 
-    // Constructor por defecto requerido por JPA
     public Mensaje() {
         this.fechaEnvio = LocalDateTime.now();
     }
 
-    // Getters y Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getEmisor() { return emisor; }
