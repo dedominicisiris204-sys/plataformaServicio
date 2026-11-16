@@ -4,7 +4,6 @@ import com.plataforma.plataforma_servicios.entidad.Perfil;
 import com.plataforma.plataforma_servicios.entidad.Usuario;
 import com.plataforma.plataforma_servicios.repositorio.PerfilRepository;
 import com.plataforma.plataforma_servicios.repositorio.UsuarioRepository;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,15 +28,21 @@ public class PerfilController {
     public ResponseEntity<?> obtenerPorUsuario(
             @PathVariable Long usuarioId) {
 
-        Optional<Usuario> usuario = usuarioRepository.findById(usuarioId);
+        Optional<Usuario> usuarioOpt = usuarioRepository.findById(usuarioId);
 
-        if (usuario.isEmpty()) {
+        if (usuarioOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
-        return perfilRepository.findByUsuarioId(usuarioId)
-                .<ResponseEntity<?>>map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.NO_CONTENT).build());
+        Perfil perfil = perfilRepository.findByUsuarioId(usuarioId)
+                .orElseGet(() -> {
+                    Perfil nuevo = new Perfil();
+                    nuevo.setUsuario(usuarioOpt.get());
+                    nuevo.setCalificacionPromedio(5.0);
+                    return perfilRepository.save(nuevo);
+                });
+
+        return ResponseEntity.ok(perfil);
     }
 
     @PutMapping("/usuario/{usuarioId}")
@@ -69,8 +74,10 @@ public class PerfilController {
         perfil.setZonaTrabajo(datos.getZonaTrabajo());
         perfil.setHorarios(datos.getHorarios());
 
-        if (perfil.getCalificacionPromedio() == null) {
-            perfil.setCalificacionPromedio(0.0);
+        if (datos.getCalificacionPromedio() != null) {
+            perfil.setCalificacionPromedio(datos.getCalificacionPromedio());
+        } else if (perfil.getCalificacionPromedio() == null) {
+            perfil.setCalificacionPromedio(5.0);
         }
 
         Perfil guardado = perfilRepository.save(perfil);
