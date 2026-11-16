@@ -14,6 +14,9 @@ public class Comentario {
     @Column(name = "publicacion_id", nullable = false)
     private Long publicacionId;
 
+    @Column(name = "comentario_padre_id", nullable = true)
+    private Long comentarioPadreId;
+
     @Column(nullable = false, length = 150)
     private String autor;
 
@@ -41,6 +44,14 @@ public class Comentario {
 
     public void setPublicacionId(Long publicacionId) {
         this.publicacionId = publicacionId;
+    }
+
+    public Long getComentarioPadreId() {
+        return comentarioPadreId;
+    }
+
+    public void setComentarioPadreId(Long comentarioPadreId) {
+        this.comentarioPadreId = comentarioPadreId;
     }
 
     public String getAutor() {

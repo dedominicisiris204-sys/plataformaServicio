@@ -27,6 +27,36 @@ export async function crearPublicacion(publicacion) {
     return await respuesta.json();
 }
 
+export async function actualizarPublicacion(id, publicacion) {
+    const respuesta = await fetch(`${API}/publicaciones/${id}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(publicacion)
+    });
+
+    if (!respuesta.ok) {
+        const texto = await respuesta.text().catch(() => "");
+        throw new Error(texto || `Error HTTP ${respuesta.status}`);
+    }
+
+    return await respuesta.json();
+}
+
+export async function eliminarPublicacion(id) {
+    const respuesta = await fetch(`${API}/publicaciones/${id}`, {
+        method: "DELETE"
+    });
+
+    if (!respuesta.ok) {
+        const texto = await respuesta.text().catch(() => "");
+        throw new Error(texto || `Error HTTP ${respuesta.status}`);
+    }
+
+    return true;
+}
+
 export async function marcarInteres(publicacionId, usuario) {
     const respuesta = await fetch(`${API}/intereses`, {
         method: "POST",
@@ -84,17 +114,23 @@ export async function obtenerComentarios(publicacionId) {
     return await respuesta.json();
 }
 
-export async function crearComentario(publicacionId, autor, contenido) {
+export async function crearComentario(publicacionId, autor, contenido, comentarioPadreId = null) {
+    const payload = {
+        publicacionId,
+        autor,
+        contenido
+    };
+
+    if (comentarioPadreId != null) {
+        payload.comentarioPadreId = comentarioPadreId;
+    }
+
     const respuesta = await fetch(`${API}/comentarios`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-            publicacionId,
-            autor,
-            contenido
-        })
+        body: JSON.stringify(payload)
     });
 
     const texto = await respuesta.text();
@@ -104,6 +140,18 @@ export async function crearComentario(publicacionId, autor, contenido) {
     }
 
     return JSON.parse(texto);
+}
+
+export async function eliminarComentario(id) {
+    const respuesta = await fetch(`${API}/comentarios/${id}`, {
+        method: "DELETE"
+    });
+
+    if (!respuesta.ok) {
+        throw new Error(`Error HTTP ${respuesta.status}`);
+    }
+
+    return true;
 }
 
 export async function obtenerConversacion(emisor, receptor) {
@@ -143,4 +191,30 @@ export async function enviarMensaje(emisor, receptor, contenido) {
     }
 
     return JSON.parse(texto);
+}
+
+export async function obtenerTodosLosMensajes() {
+    const respuesta = await fetch(`${API}/mensajes`);
+    if (!respuesta.ok) {
+        throw new Error(`Error HTTP ${respuesta.status}`);
+    }
+    return await respuesta.json();
+}
+
+export async function eliminarMensaje(id) {
+    const respuesta = await fetch(`${API}/mensajes/${id}`, {
+        method: "DELETE"
+    });
+    if (!respuesta.ok) {
+        throw new Error(`Error HTTP ${respuesta.status}`);
+    }
+    return true;
+}
+
+export async function obtenerUsuarios() {
+    const respuesta = await fetch(`${API}/usuarios`);
+    if (!respuesta.ok) {
+        throw new Error(`Error HTTP ${respuesta.status}`);
+    }
+    return await respuesta.json();
 }
