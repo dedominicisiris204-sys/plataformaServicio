@@ -39,4 +39,6 @@ build/
 # Configuracion local y credenciales: no publicar
 application.properties
 application-local.properties
+uploads/
+backend/uploads/
 node_modules/

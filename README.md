@@ -42,6 +42,23 @@ ARRANCAR.bat
 ```
 Este script verifica MySQL, arranca frontend (puerto 5174) y backend (puerto 8085) en ventanas independientes y abre el navegador automáticamente en `http://localhost:5174`. Para detener todo con un clic, ejecuta `DETENER.bat`.
 
+### Despliegue en Railway
+
+La raíz del repositorio incluye un `Dockerfile` que construye el frontend y el backend y sirve ambos desde el mismo origen. En Railway, crea un servicio desde este repositorio y añade una base MySQL 8. Configura estas variables en el servicio de la aplicación:
+
+| Variable | Valor |
+| --- | --- |
+| `SPRING_PROFILES_ACTIVE` | `production` |
+| `APP_USER` | usuario para acceder a la demostración |
+| `APP_PASSWORD` | contraseña fuerte para acceder a la demostración |
+| `DB_HOST` | referencia a `MYSQLHOST` del servicio MySQL |
+| `DB_PORT` | referencia a `MYSQLPORT` del servicio MySQL |
+| `DB_NAME` | referencia a `MYSQLDATABASE` del servicio MySQL |
+| `DB_USERNAME` | referencia a `MYSQLUSER` del servicio MySQL |
+| `DB_PASSWORD` | referencia a `MYSQLPASSWORD` del servicio MySQL |
+
+En producción, solo los chequeos de salud quedan públicos; el resto requiere autenticación HTTP Basic. Monta un volumen persistente en `/app/uploads` para conservar las imágenes cargadas. La base MySQL del template incluye su propio volumen.
+
 ### Método 2: Inicio por línea de comandos
 
 #### Backend:
