@@ -49,15 +49,13 @@ La raíz del repositorio incluye un `Dockerfile` que construye el frontend y el 
 | Variable | Valor |
 | --- | --- |
 | `SPRING_PROFILES_ACTIVE` | `production` |
-| `APP_USER` | usuario para acceder a la demostración |
-| `APP_PASSWORD` | contraseña fuerte para acceder a la demostración |
 | `DB_HOST` | referencia a `MYSQLHOST` del servicio MySQL |
 | `DB_PORT` | referencia a `MYSQLPORT` del servicio MySQL |
 | `DB_NAME` | referencia a `MYSQLDATABASE` del servicio MySQL |
 | `DB_USERNAME` | referencia a `MYSQLUSER` del servicio MySQL |
 | `DB_PASSWORD` | referencia a `MYSQLPASSWORD` del servicio MySQL |
 
-En producción, solo los chequeos de salud quedan públicos; el resto requiere autenticación HTTP Basic. Monta un volumen persistente en `/app/uploads` para conservar las imágenes cargadas. La base MySQL del template incluye su propio volumen.
+El sitio y la API quedan públicos y no requieren credenciales. Monta un volumen persistente en `/app/uploads` para conservar las imágenes cargadas. La base MySQL del template incluye su propio volumen.
 
 ### Método 2: Inicio por línea de comandos
 
