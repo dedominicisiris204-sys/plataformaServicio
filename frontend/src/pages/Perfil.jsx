@@ -1608,6 +1608,340 @@ export default function Perfil() {
             grid-template-columns: repeat(2,1fr);
           }
         }
+
+        @media (max-width: 640px) {
+          .perfil-layout {
+            min-height: 100dvh;
+            overflow-x: clip;
+          }
+
+          .perfil-page {
+            width: 100%;
+            padding-bottom: 28px;
+          }
+
+          .perfil-topbar {
+            height: auto;
+            min-height: 0;
+            align-items: stretch;
+            flex-direction: column;
+            gap: 12px;
+            padding: 12px 16px;
+          }
+
+          .marca {
+            min-width: 0;
+            gap: 9px;
+          }
+
+          .marca-logo {
+            width: 36px;
+            height: 36px;
+            flex: 0 0 36px;
+          }
+
+          .marca > span {
+            min-width: 0;
+            font-size: 13px;
+            line-height: 1.3;
+          }
+
+          .perfil-topbar-actions {
+            width: 100%;
+            display: grid !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px !important;
+          }
+
+          .perfil-topbar-actions .volver {
+            min-width: 0;
+            min-height: 40px;
+            padding: 8px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 11.5px;
+            line-height: 1.25;
+            overflow-wrap: anywhere;
+          }
+
+          .perfil-container {
+            width: min(calc(100% - 24px), 560px);
+            margin: 14px auto 0;
+          }
+
+          .hero {
+            padding: 18px 16px;
+            border-radius: 20px;
+          }
+
+          .hero-badge {
+            max-width: 100%;
+            margin-bottom: 14px;
+            padding: 6px 10px;
+            font-size: 9.5px;
+            letter-spacing: .6px;
+          }
+
+          .hero-main {
+            display: grid;
+            grid-template-columns: 76px minmax(0, 1fr);
+            align-items: start;
+            gap: 12px;
+          }
+
+          .hero-main > div:nth-child(2) {
+            min-width: 0;
+          }
+
+          .avatar-grande {
+            width: 68px;
+            height: 68px;
+            border-radius: 20px;
+            font-size: 28px;
+          }
+
+          .hero h1 {
+            margin: 0 0 4px;
+            font-size: clamp(21px, 6vw, 28px);
+            line-height: 1.15;
+            overflow-wrap: anywhere;
+          }
+
+          .hero-oficio {
+            margin-bottom: 9px;
+            font-size: 13px;
+            line-height: 1.4;
+            overflow-wrap: anywhere;
+          }
+
+          .hero-main > div:nth-child(2) > div[style] {
+            gap: 6px !important;
+          }
+
+          .hero-meta {
+            grid-column: 1 / -1;
+            min-width: 0;
+            gap: 7px;
+            font-size: 11px;
+          }
+
+          .meta-pill {
+            max-width: 100%;
+            padding: 6px 9px;
+            border-radius: 12px;
+            overflow-wrap: anywhere;
+          }
+
+          .hero-meta select {
+            max-width: 100%;
+            white-space: normal;
+          }
+
+          .hero-actions {
+            grid-column: 1 / -1;
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+          }
+
+          .hero-actions .btn {
+            min-width: 0;
+            min-height: 42px;
+            padding: 9px 8px;
+            font-size: 11px;
+            line-height: 1.25;
+          }
+
+          .stats {
+            gap: 8px;
+            margin-top: 16px;
+          }
+
+          .stat {
+            min-width: 0;
+            padding: 11px 9px;
+            border-radius: 13px;
+          }
+
+          .stat strong {
+            font-size: 19px;
+          }
+
+          .stat span {
+            display: block;
+            font-size: 9px;
+            letter-spacing: .35px;
+            line-height: 1.3;
+          }
+
+          .completitud {
+            padding: 12px;
+          }
+
+          .completitud-top {
+            gap: 8px;
+            font-size: 11px;
+          }
+
+          .contenido {
+            margin-top: 14px;
+            gap: 12px;
+          }
+
+          .tabs {
+            flex-wrap: nowrap;
+            gap: 6px;
+            padding: 6px;
+            overflow-x: auto;
+            overscroll-behavior-x: contain;
+            scrollbar-width: thin;
+            border-radius: 14px;
+          }
+
+          .tab {
+            flex: 0 0 auto;
+            min-height: 40px;
+            padding: 9px 12px;
+            font-size: 12px;
+            white-space: nowrap;
+          }
+
+          .card {
+            min-width: 0;
+            padding: 16px;
+            border-radius: 17px;
+          }
+
+          .section-title {
+            align-items: stretch;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 14px;
+          }
+
+          .section-title h2 {
+            font-size: 18px;
+            line-height: 1.3;
+          }
+
+          .section-title p {
+            font-size: 12px;
+            line-height: 1.45;
+          }
+
+          .section-title > .btn,
+          .section-title > button {
+            width: 100%;
+            min-height: 42px;
+          }
+
+          .sobre-grid,
+          .grid-items,
+          .portfolio-grid,
+          .form-grid {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 10px;
+          }
+
+          .item,
+          .portfolio {
+            min-width: 0;
+          }
+
+          .item {
+            padding: 14px;
+          }
+
+          .item h3,
+          .item p,
+          .portfolio-body h3,
+          .portfolio-body p,
+          .descripcion {
+            overflow-wrap: anywhere;
+          }
+
+          .info-row {
+            flex-direction: column;
+            gap: 3px;
+            font-size: 12px;
+          }
+
+          .info-row strong {
+            text-align: left;
+            overflow-wrap: anywhere;
+          }
+
+          .form-card {
+            padding: 14px;
+          }
+
+          .acciones {
+            flex-direction: column-reverse;
+            gap: 8px;
+          }
+
+          .acciones > .btn {
+            width: 100%;
+            min-height: 42px;
+          }
+
+          .modal-fondo {
+            padding: 10px;
+          }
+
+          .modal {
+            max-height: 94dvh;
+            padding: 17px;
+            border-radius: 18px;
+          }
+
+          .modal-header h3 {
+            max-width: calc(100% - 44px);
+            font-size: 17px;
+          }
+
+          .empty {
+            padding: 24px 12px;
+            font-size: 13px;
+          }
+        }
+
+        @media (max-width: 380px) {
+          .perfil-container {
+            width: calc(100% - 18px);
+          }
+
+          .perfil-topbar {
+            padding-right: 10px;
+            padding-left: 10px;
+          }
+
+          .hero {
+            padding: 15px 12px;
+          }
+
+          .hero-main {
+            grid-template-columns: 64px minmax(0, 1fr);
+            gap: 8px;
+          }
+
+          .avatar-grande {
+            width: 58px;
+            height: 58px;
+            border-radius: 17px;
+          }
+
+          .hero-actions {
+            grid-template-columns: 1fr;
+          }
+
+          .card {
+            padding: 13px;
+          }
+        }
       `}</style>
 
       {/* BARRA LATERAL DE FUNCIONALIDADES EN PERFIL */}
@@ -1777,7 +2111,7 @@ export default function Perfil() {
             </span>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div className="perfil-topbar-actions" style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <button
               type="button"
               onClick={toggleTema}
