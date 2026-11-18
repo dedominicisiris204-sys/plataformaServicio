@@ -1054,11 +1054,15 @@ export default function Perfil() {
 
         .hero-meta {
           display: flex;
+          flex: 1 1 240px;
+          align-content: center;
           flex-wrap: wrap;
           gap: 10px;
           color: #f0fdfa;
           font-size: 13px;
         }
+
+        .hero-identity { min-width: 180px; }
 
         .meta-pill {
           display: inline-flex;
@@ -1691,7 +1695,7 @@ export default function Perfil() {
             gap: 12px;
           }
 
-          .hero-main > div:nth-child(2) {
+          .hero-identity {
             min-width: 0;
           }
 
@@ -1716,7 +1720,7 @@ export default function Perfil() {
             overflow-wrap: anywhere;
           }
 
-          .hero-main > div:nth-child(2) > div[style] {
+          .hero-identity > div[style] {
             gap: 6px !important;
           }
 
@@ -2148,7 +2152,7 @@ export default function Perfil() {
                 onSubirFoto={!autorVisitado ? manejarSubirFotoPerfil : undefined}
               />
 
-              <div>
+              <div className="hero-identity">
                 <h1>{nombreMostrado}</h1>
 
                 <div className="hero-oficio">
@@ -2198,7 +2202,9 @@ export default function Perfil() {
                   </span>
                 </div>
 
-                <div className="hero-meta">
+              </div>
+
+              <div className="hero-meta">
                   <span className="meta-pill">
                     ✉ {texto(usuario?.email)}
                   </span>
@@ -2256,7 +2262,6 @@ export default function Perfil() {
                     <strong>{promedioActual} / 5.0</strong> ({resenas.length})
                   </span>
                 </div>
-              </div>
 
               <div className="hero-actions">
                 <button

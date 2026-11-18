@@ -367,12 +367,14 @@ export default function Mensajes() {
   }
 
   return (
-    <div className="chat-layout-root">
+    <div className={`chat-layout-root ${receptor ? "chat-has-active-conversation" : "chat-show-conversation-list"}`}>
       <style>{`
         .chat-layout-root {
           display: flex;
-          height: 100vh;
-          width: 100vw;
+          height: 100dvh;
+          min-height: 0;
+          width: 100%;
+          max-width: 100vw;
           overflow: hidden;
           background: var(--background-site);
           color: var(--text);
@@ -702,6 +704,42 @@ export default function Mensajes() {
           border-radius: 12px;
           box-shadow: var(--shadow-md);
           margin-bottom: 6px;
+        }
+
+        .mobile-chat-back { display: none; }
+
+        @media (max-width: 760px) {
+          .chat-layout-root { height: 100dvh; overflow: hidden; }
+          .chat-layout-root > .dashboard-sidebar { display: none !important; }
+          .chat-main-area { width: 100%; height: 100dvh; min-width: 0; }
+          .chat-topbar { height: 54px; min-height: 54px; padding: 0 12px; }
+          .chat-topbar > * { min-width: 0; }
+          .chat-container-split { position: relative; height: calc(100dvh - 54px); min-height: 0; }
+          .chat-sidebar-pane, .chat-window-pane { width: 100%; min-width: 0; max-width: none; height: 100%; }
+          .chat-sidebar-pane, .chat-window-pane { flex: 1 1 100%; }
+          .chat-has-active-conversation .chat-sidebar-pane { display: none; }
+          .chat-show-conversation-list .chat-window-pane { display: none; }
+          .chat-search-wrap { padding: 12px; }
+          .conversation-card-item { padding: 11px 10px; }
+          .chat-conversation-header { height: auto; min-height: 62px; padding: 8px 10px; gap: 8px; }
+          .chat-conversation-header > div:first-of-type { gap: 8px !important; min-width: 0; }
+          .chat-conversation-header > div:first-of-type > div:last-child { min-width: 0; }
+          .chat-conversation-header > div:first-of-type span { display: none; }
+          .chat-conversation-header > div:last-child { justify-content: flex-end; flex-wrap: nowrap !important; gap: 4px !important; max-width: 58%; overflow-x: auto; }
+          .chat-conversation-header > div:last-child button { flex: 0 0 auto; padding: 6px 7px !important; font-size: 10px !important; white-space: nowrap; }
+          .mobile-chat-back { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 36px; height: 36px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-soft); color: var(--text); font-size: 18px; }
+          .chat-messages-timeline { padding: 14px 10px; }
+          .chat-bubble { max-width: 88%; padding: 10px 12px; font-size: 14px; }
+          .chat-quick-replies-bar { padding: 8px 10px; }
+          .chat-input-bar { padding: 9px 10px max(9px, env(safe-area-inset-bottom)); gap: 7px; }
+          .chat-text-input { min-width: 0; padding: 11px 14px; }
+          .btn-chat-send { padding: 11px 14px; }
+        }
+
+        @media (max-width: 400px) {
+          .chat-topbar { padding: 0 8px; }
+          .chat-topbar span { font-size: 11px !important; }
+          .chat-avatar-circle { width: 38px !important; height: 38px !important; min-width: 38px !important; }
         }
       `}</style>
 
@@ -1054,6 +1092,7 @@ export default function Mensajes() {
               <>
                 {/* Cabecera del Chat Activo */}
                 <div className="chat-conversation-header">
+                  <button type="button" className="mobile-chat-back" onClick={() => setReceptor("")} aria-label="Volver a conversaciones">←</button>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <div className="chat-avatar-circle" style={{ width: 42, height: 42, minWidth: 42 }}>
                       {receptor.charAt(0).toUpperCase()}
