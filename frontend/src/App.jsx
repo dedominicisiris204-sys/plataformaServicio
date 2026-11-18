@@ -101,6 +101,7 @@ function Dashboard() {
   const [modalReciboAbierto, setModalReciboAbierto] = useState(false);
   const [datosRecibo, setDatosRecibo] = useState(null);
   const [modalBilleteraAbierto, setModalBilleteraAbierto] = useState(false);
+  const [sidebarAbierto, setSidebarAbierto] = useState(false);
 
   // Modo Oscuro / Claro
   const [esModoOscuro, setEsModoOscuro] = useState(() => {
@@ -317,15 +318,44 @@ function Dashboard() {
       <Sidebar
         seccionActiva={seccionActiva}
         setSeccionActiva={setSeccionActiva}
-        abrirModalPublicar={() => setModalPublicarAbierto(true)}
-        abrirModalPresupuesto={() => setModalPresupuestoAbierto(true)}
-        abrirModalPlanesEmpresas={() => setModalPlanesEmpresasAbierto(true)}
-        abrirModalCuadrillas={() => setModalCuadrillasAbierto(true)}
-        abrirModalVerificacion={() => setModalVerificacionAbierto(true)}
-        abrirModalAdmin={() => setModalAdminAbierto(true)}
-        abrirModalCalculadora={() => setModalCalculadoraAbierto(true)}
-        abrirModalRecibo={() => setModalReciboAbierto(true)}
-        abrirModalBilletera={() => setModalBilleteraAbierto(true)}
+        sidebarAbierto={sidebarAbierto}
+        setSidebarAbierto={setSidebarAbierto}
+        abrirModalPublicar={() => {
+          setModalPublicarAbierto(true);
+          setSidebarAbierto(false);
+        }}
+        abrirModalPresupuesto={() => {
+          setModalPresupuestoAbierto(true);
+          setSidebarAbierto(false);
+        }}
+        abrirModalPlanesEmpresas={() => {
+          setModalPlanesEmpresasAbierto(true);
+          setSidebarAbierto(false);
+        }}
+        abrirModalCuadrillas={() => {
+          setModalCuadrillasAbierto(true);
+          setSidebarAbierto(false);
+        }}
+        abrirModalVerificacion={() => {
+          setModalVerificacionAbierto(true);
+          setSidebarAbierto(false);
+        }}
+        abrirModalAdmin={() => {
+          setModalAdminAbierto(true);
+          setSidebarAbierto(false);
+        }}
+        abrirModalCalculadora={() => {
+          setModalCalculadoraAbierto(true);
+          setSidebarAbierto(false);
+        }}
+        abrirModalRecibo={() => {
+          setModalReciboAbierto(true);
+          setSidebarAbierto(false);
+        }}
+        abrirModalBilletera={() => {
+          setModalBilleteraAbierto(true);
+          setSidebarAbierto(false);
+        }}
         rolActivo={rolActivo}
         setRolActivo={setRolActivo}
         usuario={usuario}
@@ -339,17 +369,30 @@ function Dashboard() {
       <div className="dashboard-main">
         {/* Topbar Superior */}
         <header className="dashboard-topbar">
-          <div className="topbar-title">
-            <h1>
-              {seccionActiva === "inicio" && "🏠 Pantalla Principal"}
-              {seccionActiva === "publicaciones" && "📰 Muro de Publicaciones"}
-              {seccionActiva === "trabajos" && "📋 Mis Trabajos (Kanban)"}
-              {seccionActiva === "mapa" && "📍 Mapa de Especialistas Cercanos"}
-              {seccionActiva === "antes-despues" && "🖼️ Portafolio Antes y Después"}
-              {seccionActiva === "buscar" && "🔍 Explorar y Buscar Servicios"}
-              {seccionActiva === "notificaciones" && "🔔 Centro de Notificaciones"}
-              {seccionActiva === "servicios" && "🛠️ Especialidades y Oficios"}
-            </h1>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+            {/* Botón hamburguesa visible solo en pantalla móvil */}
+            <button
+              type="button"
+              className="btn-hamburguesa-movil"
+              onClick={() => setSidebarAbierto(true)}
+              aria-label="Abrir Menú"
+              title="Abrir Menú"
+            >
+              ☰
+            </button>
+
+            <div className="topbar-title">
+              <h1>
+                {seccionActiva === "inicio" && "🏠 Pantalla Principal"}
+                {seccionActiva === "publicaciones" && "📰 Publicaciones"}
+                {seccionActiva === "trabajos" && "📋 Mis Trabajos"}
+                {seccionActiva === "mapa" && "📍 Cercanía"}
+                {seccionActiva === "antes-despues" && "🖼️ Portafolio"}
+                {seccionActiva === "buscar" && "🔍 Explorar"}
+                {seccionActiva === "notificaciones" && "🔔 Notificaciones"}
+                {seccionActiva === "servicios" && "🛠️ Oficios"}
+              </h1>
+            </div>
           </div>
 
           <div className="topbar-search">
@@ -1157,6 +1200,61 @@ function Dashboard() {
         alCerrar={() => setModalBilleteraAbierto(false)}
         usuario={usuario}
       />
+
+      {/* BARRA DE NAVEGACIÓN INFERIOR PARA TELÉFONOS (EXPERIENCIA APP MÓVIL) */}
+      <nav className="mobile-bottom-nav" aria-label="Navegación Móvil Principal">
+        <button
+          type="button"
+          className={`mobile-nav-tab ${seccionActiva === "inicio" ? "active" : ""}`}
+          onClick={() => {
+            setSeccionActiva("inicio");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        >
+          <span className="mobile-nav-icon">🏠</span>
+          <span className="mobile-nav-label">Inicio</span>
+        </button>
+
+        <button
+          type="button"
+          className={`mobile-nav-tab ${seccionActiva === "publicaciones" ? "active" : ""}`}
+          onClick={() => {
+            setSeccionActiva("publicaciones");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        >
+          <span className="mobile-nav-icon">📰</span>
+          <span className="mobile-nav-label">Muro</span>
+        </button>
+
+        <button
+          type="button"
+          className="mobile-nav-tab mobile-nav-tab-cta"
+          onClick={() => setModalPublicarAbierto(true)}
+          aria-label="Publicar empleo o servicio"
+          title="Publicar empleo o servicio"
+        >
+          <span className="mobile-nav-fab">+</span>
+        </button>
+
+        <button
+          type="button"
+          className="mobile-nav-tab"
+          onClick={() => navigate("/mensajes")}
+        >
+          <span className="mobile-nav-icon">💬</span>
+          <span className="mobile-nav-label">Chat</span>
+        </button>
+
+        <button
+          type="button"
+          className="mobile-nav-tab"
+          onClick={() => setSidebarAbierto(true)}
+        >
+          <span className="mobile-nav-icon">☰</span>
+          <span className="mobile-nav-label">Menú</span>
+        </button>
+      </nav>
     </div>
   );
 }
