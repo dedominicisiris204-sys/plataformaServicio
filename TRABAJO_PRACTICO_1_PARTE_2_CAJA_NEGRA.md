@@ -4,7 +4,7 @@
 | Campo | Detalle |
 | :--- | :--- |
 | **Materia** | Verificación y Validación de Programas |
-| **Docente** | Elías Josué Vergara Ceballos |
+| **Docente** | Prof. Yamil Alvarez |
 | **Integrantes (Grupo de 2)** | Iris De Dominicis – Josué Chimbo |
 | **Software probado** | Plataforma de Servicios y Oficios (Spring Boot + MySQL + React Vite) |
 | **Fecha de entrega** | Noviembre de 2026 |

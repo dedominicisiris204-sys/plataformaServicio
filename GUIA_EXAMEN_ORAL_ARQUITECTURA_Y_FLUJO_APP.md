@@ -4,7 +4,7 @@
 | Campo | Detalle Académico |
 | :--- | :--- |
 | **Materia** | Verificación y Validación de Programas / Proyecto de Software |
-| **Docente** | Elías Josué Vergara Ceballos |
+| **Docente** | Prof. Yamil Alvarez |
 | **Integrantes** | Iris De Dominicis – Josué Chimbo |
 | **Stack Técnico** | React 18 + Vite (SPA) \| Spring Boot 3 (Java 17/21) \| MySQL 8 Relacional |
 | **Archivo Word Editable** | [GUIA_EXAMEN_ORAL_ARQUITECTURA_Y_FLUJO_APP.docx](file:///C:/Users/Admin/Desktop/PROYECTO_PLATAFORMA_SERVICIOS/GUIA_EXAMEN_ORAL_ARQUITECTURA_Y_FLUJO_APP.docx) |
