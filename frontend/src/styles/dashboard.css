@@ -1333,8 +1333,6 @@
   .mobile-nav-fab:active {
     transform: scale(0.92);
   }
-}
-
   /* 10. Toasts de notificación reposicionados arriba de la barra inferior */
   .toast-notification-wrapper {
     bottom: 74px !important;
