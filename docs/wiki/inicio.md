@@ -17,7 +17,7 @@ El proyecto fue desarrollado como trabajo final para la materia **Gestión de Pr
 | **Josue Elias Chimbo** | **Full Stack Developer** | Desarrollo de endpoints REST, controladores y componentes modulares |
 | **Mateo Alberto Cuello** | **QA & Frontend Developer** | Pruebas de integración, validación de componentes interactivos y experiencia de usuario |
 
-* **Profesor Evaluador:** Narcizo  
+* **Profesor Evaluador / Docente:** Prof. Yamil Alvarez  
 * **Institución:** Instituto Superior de Formación Técnica  
 * **Año Académico:** 2026
 
