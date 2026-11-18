@@ -15,26 +15,52 @@ export default function PublicacionCard({
   setComentarioNuevo,
   procesandoComentario,
   enviarComentario,
-  alPedirPresupuesto
+  alPedirPresupuesto,
+  alCalificar
 }) {
   const navigate = useNavigate();
   const id = publicacion.id;
   const esUrgencia = publicacion.tipo?.toLowerCase().includes("urgencia") || publicacion.tipo?.toLowerCase().includes("guardia") || (publicacion.tags || []).some(t => /urgencia|guardia|24hs/i.test(t));
+  const esDestacada = Boolean(publicacion.destacada || (publicacion.tags || []).some(t => /destacado|prioritario|top/i.test(t)));
 
   return (
     <article
       style={{
         background: "var(--surface-card)",
         borderRadius: 16,
-        border: esUrgencia ? "2px solid #ef4444" : "1px solid var(--border)",
+        border: esUrgencia ? "2px solid #ef4444" : esDestacada ? "2px solid #f59e0b" : "1px solid var(--border)",
         padding: "20px 24px",
-        boxShadow: "var(--card-shadow)",
+        boxShadow: esDestacada ? "0 4px 20px rgba(245, 158, 11, 0.2)" : "var(--card-shadow)",
         display: "flex",
         flexDirection: "column",
         gap: 14,
         position: "relative"
       }}
     >
+      {/* Badge de Publicación Destacada */}
+      {esDestacada && !esUrgencia && (
+        <div
+          style={{
+            position: "absolute",
+            top: -10,
+            right: 20,
+            background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+            color: "#1e1b4b",
+            fontSize: 10.5,
+            fontWeight: 900,
+            padding: "3px 12px",
+            borderRadius: 12,
+            boxShadow: "0 2px 8px rgba(245, 158, 11, 0.35)",
+            display: "flex",
+            alignItems: "center",
+            gap: 4
+          }}
+        >
+          <span>⭐</span>
+          <span>PUBLICACIÓN DESTACADA</span>
+        </div>
+      )}
+
       {/* Badge de Guardia 24hs si aplica */}
       {esUrgencia && (
         <div
@@ -226,6 +252,62 @@ export default function PublicacionCard({
 
         <button
           type="button"
+          onClick={() => alCalificar && alCalificar(publicacion)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            background: "#fffbeb",
+            color: "#b45309",
+            border: "1px solid #fde68a",
+            padding: "8px 14px",
+            borderRadius: 8,
+            fontSize: 12.5,
+            fontWeight: 700,
+            cursor: "pointer"
+          }}
+          title="Calificar el trabajo y dejar una reseña verificada de 5 estrellas"
+        >
+          ⭐ Calificar
+        </button>
+
+        {/* Botón Compartir en WhatsApp */}
+        <button
+          type="button"
+          onClick={() => {
+            const textoCompartir = `¡Mirá este servicio/trabajo en la Plataforma de Oficios!\n📌 ${publicacion.tipo || "Servicio"}: "${(publicacion.contenido || "").slice(0, 90)}..."\n👤 Publicado por: ${publicacion.autor}\n👉 Ingresá a la plataforma para coordinar sin intermediarios: ${window.location.origin}`;
+            if (navigator.share) {
+              navigator.share({
+                title: "Plataforma de Servicios",
+                text: textoCompartir,
+                url: window.location.origin
+              }).catch(() => {});
+            } else {
+              window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(textoCompartir)}`, "_blank");
+            }
+          }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            background: "#25d366",
+            color: "white",
+            border: "none",
+            padding: "8px 12px",
+            borderRadius: 8,
+            fontSize: 12.5,
+            fontWeight: 700,
+            cursor: "pointer",
+            boxShadow: "0 2px 6px rgba(37, 211, 102, 0.3)"
+          }}
+          title="Compartir esta oportunidad o servicio directamente en WhatsApp o redes"
+        >
+          <span>📲</span>
+          <span>Compartir</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => {
             if (!usuario) {
               navigate("/login");
@@ -238,18 +320,21 @@ export default function PublicacionCard({
             display: "flex",
             alignItems: "center",
             gap: 6,
-            background: "var(--primary)",
+            background: "linear-gradient(135deg, #0d9488 0%, #2563eb 100%)",
             color: "white",
             border: "none",
             padding: "8px 16px",
             borderRadius: 8,
-            fontSize: 13,
-            fontWeight: 700,
+            fontSize: 12.5,
+            fontWeight: 800,
             cursor: "pointer",
-            marginLeft: "auto"
+            marginLeft: "auto",
+            boxShadow: "0 2px 8px rgba(13, 148, 136, 0.25)"
           }}
+          title="Abrir chat privado y seguro en la plataforma para coordinar sin riesgos"
         >
-          ✉️ Contactar
+          <span>💬</span>
+          <span>Contactar por Chat Seguro</span>
         </button>
       </div>
 
