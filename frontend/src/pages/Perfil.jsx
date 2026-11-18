@@ -1005,9 +1005,10 @@ export default function Perfil() {
         .hero-main {
           position: relative;
           z-index: 2;
-          display: flex;
+          display: grid;
+          grid-template-columns: 116px minmax(0, 1fr) minmax(0, 1.2fr);
           align-items: center;
-          gap: 25px;
+          gap: 18px 22px;
         }
 
         .avatar {
@@ -1054,7 +1055,7 @@ export default function Perfil() {
 
         .hero-meta {
           display: flex;
-          flex: 1 1 240px;
+          min-width: 0;
           align-content: center;
           flex-wrap: wrap;
           gap: 10px;
@@ -1062,7 +1063,7 @@ export default function Perfil() {
           font-size: 13px;
         }
 
-        .hero-identity { min-width: 180px; }
+        .hero-identity { min-width: 0; }
 
         .meta-pill {
           display: inline-flex;
@@ -1082,7 +1083,8 @@ export default function Perfil() {
         }
 
         .hero-actions {
-          margin-left: auto;
+          grid-column: 2 / -1;
+          margin-left: 0;
           display: flex;
           flex-wrap: wrap;
           gap: 10px;
@@ -1596,8 +1598,13 @@ export default function Perfil() {
             display: none;
           }
           .hero-main {
+            grid-template-columns: 96px minmax(0, 1fr);
             align-items: flex-start;
-            flex-direction: column;
+            gap: 14px;
+          }
+          .hero-meta,
+          .hero-actions {
+            grid-column: 1 / -1;
           }
           .hero-actions {
             margin-left: 0;
