@@ -14,7 +14,13 @@ export default function PresupuestoModal({ abierto, alCerrar, usuario, alGuardar
 
   if (!abierto) return null;
 
-  const total = (Number(manoDeObra) || 0) + (Number(materiales) || 0);
+  const manoDeObraNum = Number(manoDeObra) || 0;
+  const materialesNum = Number(materiales) || 0;
+  const total = manoDeObraNum + materialesNum;
+  // Comisión ética de la plataforma: 10% sobre la mano de obra (no se le cobra sobre materiales)
+  const porcentajeComision = 10;
+  const comisionPlataforma = Math.round(manoDeObraNum * (porcentajeComision / 100));
+  const gananciaNetaProfesional = total - comisionPlataforma;
 
   const handleGenerar = (e) => {
     e.preventDefault();
@@ -32,9 +38,12 @@ export default function PresupuestoModal({ abierto, alCerrar, usuario, alGuardar
         cliente,
         rubro,
         descripcion,
-        manoDeObra: Number(manoDeObra) || 0,
-        materiales: Number(materiales) || 0,
+        manoDeObra: manoDeObraNum,
+        materiales: materialesNum,
         total,
+        porcentajeComision,
+        comisionPlataforma,
+        gananciaNetaProfesional,
         tiempoEstimado,
         garantia
       });
@@ -46,17 +55,50 @@ export default function PresupuestoModal({ abierto, alCerrar, usuario, alGuardar
   };
 
   return (
-    <div className="modal-overlay" onClick={alCerrar}>
-      <div className="modal-container" style={{ maxWidth: 620 }} onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>📄 Presupuesto Digital Formal</h2>
+    <div className="modal-overlay" onClick={alCerrar} style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "16px", zIndex: 1100 }}>
+      <div
+        className="modal-container"
+        style={{
+          maxWidth: 640,
+          width: "100%",
+          maxHeight: "92vh",
+          display: "flex",
+          flexDirection: "column",
+          borderRadius: 18,
+          overflow: "hidden",
+          boxShadow: "0 20px 40px rgba(0,0,0,0.4)"
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="modal-header" style={{ flexShrink: 0, padding: "16px 20px" }}>
+          <h2 style={{ margin: 0, fontSize: 18 }}>📄 Presupuesto Digital Formal</h2>
           <button className="btn-close-modal" onClick={alCerrar}>✕</button>
         </div>
 
         {!generado ? (
-          <form onSubmit={handleGenerar}>
-            <div className="modal-body">
-              <div style={{ background: "var(--surface-soft)", padding: "12px 16px", borderRadius: 10, fontSize: 13, color: "var(--text)" }}>
+          <form
+            onSubmit={handleGenerar}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              flex: 1,
+              minHeight: 0,
+              overflow: "hidden"
+            }}
+          >
+            <div
+              className="modal-body"
+              style={{
+                overflowY: "auto",
+                flex: 1,
+                minHeight: 0,
+                padding: "16px 20px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 14
+              }}
+            >
+              <div style={{ background: "var(--surface-soft)", padding: "10px 14px", borderRadius: 10, fontSize: 13, color: "var(--text)" }}>
                 💡 Confecciona un presupuesto claro y profesional para tu cliente con desglose de costos y garantía.
               </div>
 
@@ -89,7 +131,7 @@ export default function PresupuestoModal({ abierto, alCerrar, usuario, alGuardar
               <div className="modal-field">
                 <label>Detalle del Trabajo a Realizar</label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   placeholder="Detalla las tareas técnicas: desmonte, instalación, pruebas de funcionamiento..."
                   value={descripcion}
                   onChange={e => setDescripcion(e.target.value)}
@@ -143,100 +185,163 @@ export default function PresupuestoModal({ abierto, alCerrar, usuario, alGuardar
                 style={{
                   background: "var(--primary-light)",
                   border: "1px solid var(--primary)",
-                  padding: "14px 18px",
+                  padding: "12px 16px",
                   borderRadius: 12,
                   display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center"
+                  flexDirection: "column",
+                  gap: 8
                 }}
               >
-                <span style={{ fontWeight: 700, color: "var(--text)" }}>Total Presupuestado:</span>
-                <span style={{ fontSize: 22, fontWeight: 900, color: "var(--primary)" }}>
-                  ${total.toLocaleString()} ARS
-                </span>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontWeight: 700, color: "var(--text)" }}>Total para el Cliente:</span>
+                  <span style={{ fontSize: 20, fontWeight: 900, color: "var(--primary)" }}>
+                    ${total.toLocaleString()} ARS
+                  </span>
+                </div>
+
+                <div style={{ borderTop: "1px dashed var(--border)", paddingTop: 6, display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                  <span style={{ color: "var(--text-muted)" }}>🛡 Comisión Plataforma ({porcentajeComision}% sobre mano de obra):</span>
+                  <strong style={{ color: "#e11d48" }}>-${comisionPlataforma.toLocaleString()} ARS</strong>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 800 }}>
+                  <span style={{ color: "var(--text)" }}>💰 Tu Ganancia Neta Estimada:</span>
+                  <span style={{ color: "#16a34a" }}>${gananciaNetaProfesional.toLocaleString()} ARS</span>
+                </div>
               </div>
             </div>
 
-            <div className="modal-footer">
+            <div
+              className="modal-footer"
+              style={{
+                flexShrink: 0,
+                borderTop: "1px solid var(--border)",
+                padding: "12px 20px",
+                background: "var(--surface)",
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 10
+              }}
+            >
               <button type="button" className="btn-modal-cancel" onClick={alCerrar}>
                 Cancelar
               </button>
-              <button type="submit" className="btn-modal-submit">
+              <button type="submit" className="btn-modal-submit" style={{ padding: "10px 18px" }}>
                 Generar Comprobante Oficial →
               </button>
             </div>
           </form>
         ) : (
-          <div className="modal-body" style={{ gap: 18 }}>
-            {/* Ticket Digital Formal */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              flex: 1,
+              minHeight: 0,
+              overflow: "hidden"
+            }}
+          >
             <div
+              className="modal-body"
               style={{
-                background: "var(--surface)",
-                border: "2px dashed var(--border)",
-                borderRadius: 16,
-                padding: "24px",
+                overflowY: "auto",
+                flex: 1,
+                minHeight: 0,
+                padding: "16px 20px",
                 display: "flex",
                 flexDirection: "column",
                 gap: 16
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid var(--border-subtle)", paddingBottom: 14 }}>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: 18, color: "var(--primary)" }}>COTIZACIÓN FORMAL DE SERVICIO</h3>
-                  <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Plataforma de Servicios y Oficios · Red de Profesionales</span>
+              {/* Ticket Digital Formal */}
+              <div
+                style={{
+                  background: "var(--surface)",
+                  border: "2px dashed var(--border)",
+                  borderRadius: 16,
+                  padding: "20px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 14
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid var(--border-subtle)", paddingBottom: 12 }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: 17, color: "var(--primary)" }}>COTIZACIÓN FORMAL DE SERVICIO</h3>
+                    <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Plataforma de Servicios y Oficios · Red de Profesionales</span>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <strong style={{ fontSize: 13, color: "var(--text)" }}>{nroCotizacion}</strong>
+                    <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Fecha: {new Date().toLocaleDateString("es-AR")}</div>
+                  </div>
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <strong style={{ fontSize: 14, color: "var(--text)" }}>{nroCotizacion}</strong>
-                  <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Fecha: {new Date().toLocaleDateString("es-AR")}</div>
-                </div>
-              </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, fontSize: 13 }}>
-                <div>
-                  <span style={{ color: "var(--text-muted)", display: "block" }}>Profesional Emisor:</span>
-                  <strong style={{ color: "var(--text)" }}>{usuario?.nombre || "Especialista Matriculado"}</strong>
-                  <div style={{ color: "var(--primary)", fontSize: 12 }}>✔ Matrícula Verificada</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, fontSize: 12.5 }}>
+                  <div>
+                    <span style={{ color: "var(--text-muted)", display: "block" }}>Profesional Emisor:</span>
+                    <strong style={{ color: "var(--text)" }}>{usuario?.nombre || "Especialista Matriculado"}</strong>
+                    <div style={{ color: "var(--primary)", fontSize: 11.5 }}>✔ Matrícula Verificada</div>
+                  </div>
+                  <div>
+                    <span style={{ color: "var(--text-muted)", display: "block" }}>Cliente:</span>
+                    <strong style={{ color: "var(--text)" }}>{cliente || "Cliente"}</strong>
+                    <div style={{ color: "var(--text-muted)", fontSize: 11.5 }}>Rubro: {rubro}</div>
+                  </div>
                 </div>
-                <div>
-                  <span style={{ color: "var(--text-muted)", display: "block" }}>Cliente:</span>
-                  <strong style={{ color: "var(--text)" }}>{cliente || "Cliente"}</strong>
-                  <div style={{ color: "var(--text-muted)", fontSize: 12 }}>Rubro: {rubro}</div>
-                </div>
-              </div>
 
-              <div style={{ background: "var(--surface-soft)", padding: "12px", borderRadius: 8, fontSize: 13 }}>
-                <span style={{ fontWeight: 700, color: "var(--text)" }}>Detalle técnico:</span>
-                <p style={{ margin: "4px 0 0", color: "var(--text-secondary)" }}>{descripcion}</p>
-              </div>
+                <div style={{ background: "var(--surface-soft)", padding: "10px", borderRadius: 8, fontSize: 12.5 }}>
+                  <span style={{ fontWeight: 700, color: "var(--text)" }}>Detalle técnico:</span>
+                  <p style={{ margin: "4px 0 0", color: "var(--text-secondary)" }}>{descripcion}</p>
+                </div>
 
-              {/* Tabla de costos */}
-              <div style={{ border: "1px solid var(--border-subtle)", borderRadius: 10, overflow: "hidden" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 14px", background: "var(--surface-soft)", fontSize: 12, fontWeight: 700 }}>
-                  <span>Concepto</span>
-                  <span>Importe</span>
+                {/* Tabla de costos */}
+                <div style={{ border: "1px solid var(--border-subtle)", borderRadius: 10, overflow: "hidden" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", background: "var(--surface-soft)", fontSize: 11.5, fontWeight: 700 }}>
+                    <span>Concepto</span>
+                    <span>Importe</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "9px 12px", borderBottom: "1px solid var(--border-subtle)", fontSize: 12.5 }}>
+                    <span>Mano de obra calificada</span>
+                    <strong>${manoDeObraNum.toLocaleString()}</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "9px 12px", borderBottom: "1px solid var(--border-subtle)", fontSize: 12.5 }}>
+                    <span>Materiales y repuestos requeridos</span>
+                    <strong>${materialesNum.toLocaleString()}</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "7px 12px", borderBottom: "1px solid var(--border-subtle)", fontSize: 11.5, color: "var(--text-muted)", background: "var(--surface)" }}>
+                    <span>Comisión Plataforma (10% sobre mano de obra)</span>
+                    <span style={{ color: "#e11d48", fontWeight: 700 }}>-${comisionPlataforma.toLocaleString()}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 12px", background: "var(--primary-light)", fontSize: 14, fontWeight: 900 }}>
+                    <span style={{ color: "var(--text)" }}>TOTAL CLIENTE:</span>
+                    <span style={{ color: "var(--primary)" }}>${total.toLocaleString()} ARS</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "7px 12px", background: "var(--surface-soft)", fontSize: 11.5, fontWeight: 800 }}>
+                    <span style={{ color: "#16a34a" }}>Neto a percibir por el profesional:</span>
+                    <span style={{ color: "#16a34a" }}>${gananciaNetaProfesional.toLocaleString()} ARS</span>
+                  </div>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 14px", borderBottom: "1px solid var(--border-subtle)", fontSize: 13 }}>
-                  <span>Mano de obra calificada</span>
-                  <strong>${(Number(manoDeObra) || 0).toLocaleString()}</strong>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 14px", borderBottom: "1px solid var(--border-subtle)", fontSize: 13 }}>
-                  <span>Materiales y repuestos requeridos</span>
-                  <strong>${(Number(materiales) || 0).toLocaleString()}</strong>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", background: "var(--primary-light)", fontSize: 15, fontWeight: 900 }}>
-                  <span style={{ color: "var(--text)" }}>TOTAL A PAGAR:</span>
-                  <span style={{ color: "var(--primary)" }}>${total.toLocaleString()} ARS</span>
-                </div>
-              </div>
 
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--text-muted)" }}>
-                <span>⏱ Plazo estimado: <strong>{tiempoEstimado}</strong></span>
-                <span>🛡 Garantía: <strong>{garantia}</strong></span>
-                <span>⏳ Validez: <strong>{validez}</strong></span>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, color: "var(--text-muted)" }}>
+                  <span>⏱ Plazo: <strong>{tiempoEstimado}</strong></span>
+                  <span>🛡 Garantía: <strong>{garantia}</strong></span>
+                  <span>⏳ Validez: <strong>{validez}</strong></span>
+                </div>
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+            <div
+              className="modal-footer"
+              style={{
+                flexShrink: 0,
+                borderTop: "1px solid var(--border)",
+                padding: "12px 20px",
+                background: "var(--surface)",
+                display: "flex",
+                gap: 10,
+                justifyContent: "flex-end"
+              }}
+            >
               <button
                 type="button"
                 className="btn-modal-cancel"
@@ -250,7 +355,7 @@ export default function PresupuestoModal({ abierto, alCerrar, usuario, alGuardar
                 onClick={handleImprimir}
                 style={{ background: "var(--surface-soft)", color: "var(--text)", border: "1px solid var(--border)" }}
               >
-                🖨 Imprimir / Guardar PDF
+                🖨 Imprimir / PDF
               </button>
               <button
                 type="button"
