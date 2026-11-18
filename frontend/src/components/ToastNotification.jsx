@@ -40,6 +40,7 @@ export default function ToastNotification({ onNavegarASeccion }) {
 
   return (
     <div
+      className="toast-notification-wrapper"
       style={{
         position: "fixed",
         bottom: 24,
@@ -47,7 +48,7 @@ export default function ToastNotification({ onNavegarASeccion }) {
         display: "flex",
         flexDirection: "column",
         gap: 10,
-        zIndex: 9999,
+        zIndex: 1100,
         maxWidth: 360
       }}
     >

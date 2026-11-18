@@ -19,9 +19,25 @@ export default function Sidebar({
   onCerrarSesion,
   notificacionesNoLeidas = 3,
   esModoOscuro,
-  onAlternarModoOscuro
+  onAlternarModoOscuro,
+  sidebarAbierto = false,
+  setSidebarAbierto
 }) {
   const navigate = useNavigate();
+
+  const cerrarMenuMovil = () => {
+    if (setSidebarAbierto) setSidebarAbierto(false);
+  };
+
+  const manejarSeccion = (sec) => {
+    if (setSeccionActiva) setSeccionActiva(sec);
+    cerrarMenuMovil();
+  };
+
+  const manejarModal = (fn) => {
+    if (fn) fn();
+    cerrarMenuMovil();
+  };
 
   // Verificación estricta de administrador: solo el admin real tiene acceso al panel
   const esAdmin = Boolean(
@@ -34,17 +50,38 @@ export default function Sidebar({
   const rolReal = esAdmin ? "ADMIN" : (usuario?.rol || "ESPECIALISTA");
 
   return (
-    <aside className="dashboard-sidebar">
-      {/* 1. Header con Logo y Marca */}
-      <div className="sidebar-header">
-        <Link to="/" className="sidebar-brand" onClick={() => setSeccionActiva("inicio")}>
-          <div className="sidebar-logo">PS</div>
-          <div className="sidebar-brand-text">
-            <h2>Plataforma</h2>
-            <span>Servicios & Oficios</span>
-          </div>
-        </Link>
-      </div>
+    <>
+      {/* Fondo oscuro para cerrar al hacer clic afuera en móviles */}
+      {sidebarAbierto && (
+        <div
+          className="sidebar-backdrop"
+          onClick={cerrarMenuMovil}
+          aria-label="Cerrar menú lateral"
+        />
+      )}
+
+      <aside className={`dashboard-sidebar ${sidebarAbierto ? "abierto" : ""}`}>
+        {/* 1. Header con Logo, Marca y Botón Cerrar en móvil */}
+        <div className="sidebar-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Link to="/" className="sidebar-brand" onClick={() => manejarSeccion("inicio")}>
+            <div className="sidebar-logo">PS</div>
+            <div className="sidebar-brand-text">
+              <h2>Plataforma</h2>
+              <span>Servicios & Oficios</span>
+            </div>
+          </Link>
+
+          {/* Botón de cierre visible en móvil */}
+          <button
+            type="button"
+            className="btn-cerrar-sidebar-movil"
+            onClick={cerrarMenuMovil}
+            title="Cerrar panel"
+            aria-label="Cerrar panel"
+          >
+            ✕
+          </button>
+        </div>
 
       {/* 2. Tarjeta de Usuario con Rol Protegido */}
       <div className="sidebar-user-card" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -125,7 +162,7 @@ export default function Sidebar({
         {/* Solo y exclusivamente el Administrador ve el botón de Ingresos y Gestión */}
         {esAdmin && (
           <button
-            onClick={abrirModalAdmin}
+            onClick={() => manejarModal(abrirModalAdmin)}
             style={{
               display: "flex",
               alignItems: "center",
@@ -150,7 +187,7 @@ export default function Sidebar({
 
         <button
           className="btn-crear-publicacion"
-          onClick={abrirModalPublicar}
+          onClick={() => manejarModal(abrirModalPublicar)}
           title="Crear una nueva publicación o solicitud"
         >
           <span className="btn-icon">✍️</span>
@@ -158,7 +195,7 @@ export default function Sidebar({
         </button>
 
         <button
-          onClick={abrirModalPresupuesto}
+          onClick={() => manejarModal(abrirModalPresupuesto)}
           style={{
             display: "flex",
             alignItems: "center",
@@ -181,7 +218,7 @@ export default function Sidebar({
 
         {/* Botón Mi Billetera & Saldo Disponible */}
         <button
-          onClick={abrirModalBilletera}
+          onClick={() => manejarModal(abrirModalBilletera)}
           style={{
             display: "flex",
             alignItems: "center",
@@ -209,7 +246,7 @@ export default function Sidebar({
 
         {/* Botón Cuadrillas y Equipos de Trabajo */}
         <button
-          onClick={abrirModalCuadrillas}
+          onClick={() => manejarModal(abrirModalCuadrillas)}
           style={{
             display: "flex",
             alignItems: "center",
@@ -233,7 +270,7 @@ export default function Sidebar({
 
         {/* Botón Planes Empresas */}
         <button
-          onClick={abrirModalPlanesEmpresas}
+          onClick={() => manejarModal(abrirModalPlanesEmpresas)}
           style={{
             display: "flex",
             alignItems: "center",
@@ -256,7 +293,7 @@ export default function Sidebar({
 
         {/* Botón Verificación de Matrícula (Trust & Safety) */}
         <button
-          onClick={abrirModalVerificacion}
+          onClick={() => manejarModal(abrirModalVerificacion)}
           style={{
             display: "flex",
             alignItems: "center",
@@ -279,7 +316,7 @@ export default function Sidebar({
 
         {/* Botón Calculadora de Precios Sugeridos */}
         <button
-          onClick={abrirModalCalculadora}
+          onClick={() => manejarModal(abrirModalCalculadora)}
           style={{
             display: "flex",
             alignItems: "center",
@@ -302,7 +339,7 @@ export default function Sidebar({
 
         {/* Botón Comprobantes y Recibos Oficiales */}
         <button
-          onClick={abrirModalRecibo}
+          onClick={() => manejarModal(abrirModalRecibo)}
           style={{
             display: "flex",
             alignItems: "center",
@@ -328,7 +365,7 @@ export default function Sidebar({
       <nav className="sidebar-nav">
         <button
           className={`sidebar-nav-item ${seccionActiva === "inicio" ? "active" : ""}`}
-          onClick={() => setSeccionActiva("inicio")}
+          onClick={() => manejarSeccion("inicio")}
         >
           <span className="nav-item-icon">🏠</span>
           <span>Pantalla Principal</span>
@@ -336,7 +373,7 @@ export default function Sidebar({
 
         <button
           className={`sidebar-nav-item ${seccionActiva === "publicaciones" ? "active" : ""}`}
-          onClick={() => setSeccionActiva("publicaciones")}
+          onClick={() => manejarSeccion("publicaciones")}
         >
           <span className="nav-item-icon">📰</span>
           <span>Ver Publicaciones</span>
@@ -344,7 +381,7 @@ export default function Sidebar({
 
         <button
           className={`sidebar-nav-item ${seccionActiva === "trabajos" ? "active" : ""}`}
-          onClick={() => setSeccionActiva("trabajos")}
+          onClick={() => manejarSeccion("trabajos")}
         >
           <span className="nav-item-icon">📋</span>
           <span>Mis Trabajos (Kanban)</span>
@@ -353,7 +390,7 @@ export default function Sidebar({
 
         <button
           className={`sidebar-nav-item ${seccionActiva === "mapa" ? "active" : ""}`}
-          onClick={() => setSeccionActiva("mapa")}
+          onClick={() => manejarSeccion("mapa")}
         >
           <span className="nav-item-icon">📍</span>
           <span>Mapa de Cercanía</span>
@@ -361,7 +398,7 @@ export default function Sidebar({
 
         <button
           className={`sidebar-nav-item ${seccionActiva === "antes-despues" ? "active" : ""}`}
-          onClick={() => setSeccionActiva("antes-despues")}
+          onClick={() => manejarSeccion("antes-despues")}
         >
           <span className="nav-item-icon">🖼️</span>
           <span>Antes y Después</span>
@@ -369,7 +406,7 @@ export default function Sidebar({
 
         <button
           className={`sidebar-nav-item ${seccionActiva === "buscar" ? "active" : ""}`}
-          onClick={() => setSeccionActiva("buscar")}
+          onClick={() => manejarSeccion("buscar")}
         >
           <span className="nav-item-icon">🔍</span>
           <span>Buscar y Explorar</span>
@@ -377,7 +414,7 @@ export default function Sidebar({
 
         <button
           className={`sidebar-nav-item ${seccionActiva === "notificaciones" ? "active" : ""}`}
-          onClick={() => setSeccionActiva("notificaciones")}
+          onClick={() => manejarSeccion("notificaciones")}
         >
           <span className="nav-item-icon">🔔</span>
           <span>Notificaciones</span>
@@ -388,7 +425,7 @@ export default function Sidebar({
 
         <button
           className={`sidebar-nav-item ${seccionActiva === "servicios" ? "active" : ""}`}
-          onClick={() => setSeccionActiva("servicios")}
+          onClick={() => manejarSeccion("servicios")}
         >
           <span className="nav-item-icon">🛠️</span>
           <span>Servicios y Oficios</span>
@@ -396,7 +433,10 @@ export default function Sidebar({
 
         <button
           className="sidebar-nav-item"
-          onClick={() => navigate("/mensajes")}
+          onClick={() => {
+            navigate("/mensajes");
+            cerrarMenuMovil();
+          }}
         >
           <span className="nav-item-icon">💬</span>
           <span>Mensajes & Chat</span>
@@ -410,6 +450,7 @@ export default function Sidebar({
             } else {
               navigate("/login");
             }
+            cerrarMenuMovil();
           }}
         >
           <span className="nav-item-icon">👤</span>
@@ -519,5 +560,6 @@ export default function Sidebar({
         )}
       </div>
     </aside>
-  );
+  </>
+);
 }
