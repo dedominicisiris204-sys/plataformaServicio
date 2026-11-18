@@ -411,6 +411,48 @@ function Dashboard() {
           </div>
 
           <div className="topbar-actions">
+            {/* Botón Notificaciones con Indicador Badge en el Icono */}
+            <button
+              onClick={() => setSeccionActiva("notificaciones")}
+              style={{
+                position: "relative",
+                background: seccionActiva === "notificaciones" ? "var(--primary-light)" : "var(--surface-soft)",
+                border: "1px solid var(--border)",
+                borderRadius: "50%",
+                width: 36,
+                height: 36,
+                minWidth: 36,
+                display: "grid",
+                placeItems: "center",
+                cursor: "pointer",
+                fontSize: 16
+              }}
+              title="Centro de Notificaciones"
+              aria-label="Ver notificaciones"
+            >
+              <span>🔔</span>
+              <span
+                style={{
+                  position: "absolute",
+                  top: -3,
+                  right: -3,
+                  background: "#ef4444",
+                  color: "white",
+                  fontSize: 10,
+                  fontWeight: 900,
+                  width: 17,
+                  height: 17,
+                  borderRadius: "50%",
+                  display: "grid",
+                  placeItems: "center",
+                  border: "2px solid var(--topbar-bg)",
+                  lineHeight: 1
+                }}
+              >
+                3
+              </span>
+            </button>
+
             {/* Toggle Rápido de Urgencias */}
             <button
               onClick={() => {
@@ -1096,8 +1138,7 @@ function Dashboard() {
         )}
       </div>
 
-      {/* TOASTS NOTIFICACIONES PUSH FLOTANTES */}
-      <ToastNotification onNavegarASeccion={setSeccionActiva} />
+      {/* Notificaciones integradas directamente en el icono de campana (Badge) */}
 
       {/* MODAL PARA REALIZAR PUBLICACIÓN */}
       <CrearPublicacionModal
@@ -1250,9 +1291,29 @@ function Dashboard() {
           type="button"
           className="mobile-nav-tab"
           onClick={() => setSidebarAbierto(true)}
+          style={{ position: "relative" }}
         >
           <span className="mobile-nav-icon">☰</span>
           <span className="mobile-nav-label">Menú</span>
+          <span
+            style={{
+              position: "absolute",
+              top: 6,
+              right: 16,
+              background: "#ef4444",
+              color: "white",
+              fontSize: 9,
+              fontWeight: 900,
+              width: 15,
+              height: 15,
+              borderRadius: "50%",
+              display: "grid",
+              placeItems: "center",
+              lineHeight: 1
+            }}
+          >
+            3
+          </span>
         </button>
       </nav>
     </div>
