@@ -48,8 +48,28 @@ public class ContratacionController {
         if (contratacion.getEstado() == null || contratacion.getEstado().isBlank()) {
             contratacion.setEstado("ACTIVA");
         }
+        if (contratacion.getPorcentajeComision() == null) {
+            contratacion.setPorcentajeComision(10.0);
+        }
+        if (contratacion.getMontoTotal() != null) {
+            contratacion.setMontoTotal(contratacion.getMontoTotal());
+        }
         Contratacion nueva = contratacionRepository.save(contratacion);
         return ResponseEntity.status(HttpStatus.CREATED).body(nueva);
+    }
+
+    @PutMapping("/{id}/comision")
+    public ResponseEntity<?> registrarPagoComision(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        Optional<Contratacion> opt = contratacionRepository.findById(id);
+        if (opt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        Contratacion c = opt.get();
+        String estadoComision = body.get("estadoComision");
+        if (estadoComision != null && !estadoComision.isBlank()) {
+            c.setEstadoComision(estadoComision.toUpperCase());
+        }
+        return ResponseEntity.ok(contratacionRepository.save(c));
     }
 
     @PutMapping("/{id}/estado")

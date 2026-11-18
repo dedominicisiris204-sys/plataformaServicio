@@ -9,6 +9,7 @@ public class UsuarioBuilder {
     private String email;
     private String password;
     private LocalDate fechaRegistro;
+    private String rol = "ESPECIALISTA";
     private Perfil perfil;
 
     public UsuarioBuilder() {
@@ -16,6 +17,11 @@ public class UsuarioBuilder {
 
     public UsuarioBuilder id(Long id) {
         this.id = id;
+        return this;
+    }
+
+    public UsuarioBuilder rol(String rol) {
+        this.rol = rol;
         return this;
     }
 
@@ -52,6 +58,7 @@ public class UsuarioBuilder {
         usuario.setEmail(email);
         usuario.setPassword(password);
         usuario.setFechaRegistro(fechaRegistro);
+        usuario.setRol(rol);
         usuario.setPerfil(perfil);
 
         return usuario;

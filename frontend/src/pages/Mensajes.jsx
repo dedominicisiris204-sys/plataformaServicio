@@ -8,6 +8,7 @@ import {
   obtenerUsuarios
 } from "../conexionPersonas";
 import Sidebar from "../components/Sidebar";
+import MercadoPagoModal from "../components/MercadoPagoModal";
 
 const RESPUESTAS_RAPIDAS = [
   "👋 Hola, ¿tenés disponibilidad para esta semana?",
@@ -66,7 +67,8 @@ export default function Mensajes() {
   const [usuariosRegistrados, setUsuariosRegistrados] = useState([]);
   const [todosLosMensajes, setTodosLosMensajes] = useState([]);
   const [busqueda, setBusqueda] = useState("");
-  const [pestanaDirectorio, setPestanaDirectorio] = useState("chats"); // "chats" | "contactos"
+  const [pestanaDirectorio, setPestanaDirectorio] = useState("contactos"); // Inicia mostrando los perfiles suscriptos
+  const [filtroRubroDirectorio, setFiltroRubroDirectorio] = useState("Todos");
   const [mostrarEmojis, setMostrarEmojis] = useState(false);
 
   // Nuevas funciones avanzadas de mensajería
@@ -79,6 +81,7 @@ export default function Mensajes() {
   });
   const [busquedaEnChat, setBusquedaEnChat] = useState("");
   const [mostrarBuscadorChat, setMostrarBuscadorChat] = useState(false);
+  const [mostrarCheckoutMP, setMostrarCheckoutMP] = useState(false);
   const [imagenAdjunta, setImagenAdjunta] = useState("");
   const [imagenFullscreen, setImagenFullscreen] = useState(null);
   const fileInputRef = useRef(null);
@@ -88,6 +91,19 @@ export default function Mensajes() {
 
   const emisor =
     usuario?.nombre || usuario?.email || usuario?.username || usuario?.nombreUsuario || "";
+
+  // Detección en tiempo real de intento de bypass o números de teléfono para protección antifraude
+  const advertenciaAntiBypass = useMemo(() => {
+    if (!contenido) return null;
+    const patronTelefono = /(\+?\d{1,4}[ -]?)?(\d{2,5}[ -]?\d{3,4}[ -]?\d{2,4})/;
+    const patronPalabras = /\b(whatsapp|wsp|wapp|transferencia|cbu|cvu|alias|telegram|llamame al|mi cel|mi tel|telefono|correo|gmail|hotmail)\b/i;
+    const patronSecuenciaNumeros = /\d{7,}/;
+
+    if (patronTelefono.test(contenido) || patronPalabras.test(contenido) || patronSecuenciaNumeros.test(contenido)) {
+      return "⚠️ Recordatorio de Seguridad: Por tu protección ante hackeos o estafas, el contacto y pagos deben mantenerse dentro de la plataforma. Mercado Pago protege tu dinero y te otorga comprobante oficial ante cualquier inconveniente.";
+    }
+    return null;
+  }, [contenido]);
 
   // Desplazar al último mensaje
   const scrollAlFinal = () => {
@@ -300,18 +316,44 @@ export default function Mensajes() {
     return listaConversaciones.filter((c) => c.nombre.toLowerCase().includes(q));
   }, [listaConversaciones, busqueda]);
 
+  const contactoActivo = useMemo(() => {
+    if (!receptor) return null;
+    return (
+      (usuariosRegistrados || []).find(
+        (u) =>
+          (u.nombre && u.nombre.toLowerCase() === receptor.toLowerCase()) ||
+          (u.email && u.email.toLowerCase() === receptor.toLowerCase())
+      ) || null
+    );
+  }, [usuariosRegistrados, receptor]);
+
   const contactosFiltrados = useMemo(() => {
     const q = busqueda.toLowerCase().trim();
+    const rubro = filtroRubroDirectorio.toLowerCase().trim();
+
     return (usuariosRegistrados || []).filter((u) => {
       const nom = (u.nombre || "").toLowerCase();
       const em = (u.email || "").toLowerCase();
       const ofi = (u.perfil?.oficio || "").toLowerCase();
-      const esMio = nom === emisor.toLowerCase() || em === emisor.toLowerCase();
+      const zona = (u.perfil?.zonaTrabajo || "").toLowerCase();
+      const rol = (u.rol || "").toLowerCase();
+      const esMio = (nom === emisor.toLowerCase() && nom !== "") || (em === emisor.toLowerCase() && em !== "");
       if (esMio) return false;
 
-      return !q || nom.includes(q) || em.includes(q) || ofi.includes(q);
+      const coincideTexto = !q || nom.includes(q) || em.includes(q) || ofi.includes(q) || zona.includes(q);
+
+      let coincideRubro = true;
+      if (rubro !== "todos") {
+        if (rubro === "empresas") {
+          coincideRubro = rol.includes("empresa") || ofi.includes("empresa") || ofi.includes("s.a.") || ofi.includes("srl");
+        } else {
+          coincideRubro = ofi.includes(rubro);
+        }
+      }
+
+      return coincideTexto && coincideRubro;
     });
-  }, [usuariosRegistrados, busqueda, emisor]);
+  }, [usuariosRegistrados, busqueda, filtroRubroDirectorio, emisor]);
 
   // Si no está autenticado, redirigir a Login
   if (!usuario) {
@@ -866,19 +908,56 @@ export default function Mensajes() {
               <div className="chat-tabs-wrap">
                 <button
                   type="button"
-                  className={`chat-tab-btn ${pestanaDirectorio === "chats" ? "active" : ""}`}
-                  onClick={() => setPestanaDirectorio("chats")}
-                >
-                  Conversaciones ({listaConversaciones.length})
-                </button>
-                <button
-                  type="button"
                   className={`chat-tab-btn ${pestanaDirectorio === "contactos" ? "active" : ""}`}
                   onClick={() => setPestanaDirectorio("contactos")}
                 >
-                  Directorio ({contactosFiltrados.length})
+                  👥 Directorio ({contactosFiltrados.length})
+                </button>
+                <button
+                  type="button"
+                  className={`chat-tab-btn ${pestanaDirectorio === "chats" ? "active" : ""}`}
+                  onClick={() => setPestanaDirectorio("chats")}
+                >
+                  💬 Mis Chats ({listaConversaciones.length})
                 </button>
               </div>
+
+              {/* Filtro por Especialidades / Rubros en el Directorio */}
+              {pestanaDirectorio === "contactos" && (
+                <div style={{ display: "flex", gap: 5, overflowX: "auto", padding: "4px 0", scrollbarWidth: "none" }}>
+                  {[
+                    { id: "Todos", label: "🌟 Todos" },
+                    { id: "Electricidad", label: "⚡ Electricidad" },
+                    { id: "Plomería", label: "🔧 Plomería" },
+                    { id: "Albañilería", label: "🧱 Albañilería" },
+                    { id: "Pintura", label: "🎨 Pintura" },
+                    { id: "Carpintería", label: "🚪 Carpintería" },
+                    { id: "Climatización", label: "❄️ Clima" },
+                    { id: "Limpieza", label: "🧹 Limpieza" },
+                    { id: "Jardinería", label: "🌳 Jardín" },
+                    { id: "Empresas", label: "🏢 Empresas" }
+                  ].map(r => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => setFiltroRubroDirectorio(r.id)}
+                      style={{
+                        padding: "4px 8px",
+                        fontSize: 11,
+                        borderRadius: 8,
+                        border: filtroRubroDirectorio === r.id ? "1px solid var(--primary)" : "1px solid var(--border)",
+                        background: filtroRubroDirectorio === r.id ? "var(--primary-light)" : "var(--surface-soft)",
+                        color: filtroRubroDirectorio === r.id ? "var(--primary)" : "var(--text-muted)",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                        fontWeight: 700
+                      }}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="chat-conversations-list">
@@ -983,48 +1062,90 @@ export default function Mensajes() {
                           className={`conversation-card-item ${esSeleccionado ? "selected" : ""}`}
                           onClick={() => {
                             setReceptor(nombreContacto);
-                            setPestanaDirectorio("chats");
+                          }}
+                          style={{
+                            padding: "12px 14px",
+                            borderRadius: 14,
+                            alignItems: "flex-start",
+                            border: esSeleccionado ? "1.5px solid var(--primary)" : "1px solid var(--border-subtle)",
+                            background: esSeleccionado ? "var(--primary-light)" : "var(--surface)",
+                            marginBottom: 4,
+                            cursor: "pointer",
+                            width: "100%",
+                            display: "flex",
+                            gap: 12,
+                            textAlign: "left"
                           }}
                         >
-                          <div className="chat-avatar-circle">
-                            {nombreContacto.charAt(0).toUpperCase()}
-                            <span className="online-status-dot"></span>
+                          <div
+                            style={{
+                              width: 44,
+                              height: 44,
+                              minWidth: 44,
+                              borderRadius: "50%",
+                              background: u.rol === "EMPRESA" ? "linear-gradient(135deg, #0284c7, #0369a1)" : "linear-gradient(135deg, #0d9488, #2563eb)",
+                              color: "white",
+                              display: "grid",
+                              placeItems: "center",
+                              fontWeight: 800,
+                              fontSize: 16,
+                              position: "relative"
+                            }}
+                          >
+                            {u.rol === "EMPRESA" ? "🏢" : u.rol === "ADMIN" ? "👑" : nombreContacto.charAt(0).toUpperCase()}
+                            <span className="online-status-dot" style={{ position: "absolute", bottom: 2, right: 2 }}></span>
                           </div>
+
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <strong
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+                              <strong
+                                style={{
+                                  fontSize: 14,
+                                  color: "var(--text)",
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis"
+                                }}
+                              >
+                                {nombreContacto}
+                              </strong>
+                              {u.rol === "EMPRESA" ? (
+                                <span style={{ fontSize: 10, background: "#e0f2fe", color: "#0369a1", padding: "1px 6px", borderRadius: 6, fontWeight: 800, flexShrink: 0 }}>
+                                  🏢 Empresa
+                                </span>
+                              ) : u.rol === "ADMIN" ? (
+                                <span style={{ fontSize: 10, background: "#fef3c7", color: "#b45309", padding: "1px 6px", borderRadius: 6, fontWeight: 800, flexShrink: 0 }}>
+                                  👑 Admin
+                                </span>
+                              ) : (
+                                <span style={{ fontSize: 10, background: "#e0f2fe", color: "#0369a1", padding: "1px 6px", borderRadius: 6, fontWeight: 700, flexShrink: 0 }}>
+                                  ✔ Verificado
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Profesión destacada */}
+                            <span
                               style={{
-                                fontSize: 14,
-                                color: "var(--text)",
+                                fontSize: 12,
+                                color: "var(--primary)",
+                                fontWeight: 700,
                                 display: "block",
+                                marginTop: 3,
                                 whiteSpace: "nowrap",
                                 overflow: "hidden",
                                 textOverflow: "ellipsis"
                               }}
+                              title={u.perfil?.oficio}
                             >
-                              {nombreContacto}
-                            </strong>
-                            <span
-                              style={{
-                                fontSize: 11.5,
-                                color: "var(--primary)",
-                                fontWeight: 600,
-                                display: "block"
-                              }}
-                            >
-                              {u.perfil?.oficio || "Especialista / Profesional"}
+                              {u.perfil?.oficio || "Especialista en Oficios & Reparaciones"}
                             </span>
+
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4, fontSize: 11, color: "var(--text-muted)" }}>
+                              <span>📍 {u.perfil?.zonaTrabajo || "Cruz del Eje"}</span>
+                              <span style={{ fontWeight: 700, color: "#d97706" }}>⭐ 5.0</span>
+                            </div>
                           </div>
-                          <span
-                            style={{
-                              fontSize: 11.5,
-                              padding: "4px 8px",
-                              background: "var(--surface-soft)",
-                              borderRadius: 6,
-                              color: "var(--text-muted)"
-                            }}
-                          >
-                            Chatear 💬
-                          </span>
                         </button>
                       );
                     })
@@ -1040,52 +1161,189 @@ export default function Mensajes() {
               <div
                 style={{
                   flex: 1,
-                  display: "grid",
-                  placeItems: "center",
-                  padding: 32,
-                  textAlign: "center"
+                  overflowY: "auto",
+                  padding: "24px 30px",
+                  background: "var(--site-bg)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 20
                 }}
               >
-                <div style={{ maxWidth: 440 }}>
-                  <div
-                    style={{
-                      width: 80,
-                      height: 80,
-                      borderRadius: "50%",
-                      background: "linear-gradient(135deg, #0d9488, #2563eb)",
-                      color: "white",
-                      display: "grid",
-                      placeItems: "center",
-                      fontSize: 36,
-                      margin: "0 auto 20px",
-                      boxShadow: "0 8px 24px rgba(13, 148, 136, 0.3)"
-                    }}
-                  >
-                    💬
+                {/* Cabecera del Directorio */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 14 }}>
+                  <div>
+                    <h2 style={{ fontSize: 22, fontWeight: 800, margin: 0, color: "var(--text)", display: "flex", alignItems: "center", gap: 10 }}>
+                      <span>👥</span>
+                      <span>Directorio de Profesionales & Perfiles Suscriptos</span>
+                    </h2>
+                    <p style={{ color: "var(--text-muted)", fontSize: 13.5, margin: "4px 0 0" }}>
+                      Conectate directamente con cualquier especialista matriculado, empresa o cliente para pedir presupuesto y coordinar por chat seguro.
+                    </p>
                   </div>
-                  <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 10 }}>
-                    Tus Mensajes y Conversaciones
-                  </h2>
-                  <p style={{ color: "var(--text-secondary)", lineHeight: 1.6, fontSize: 14, marginBottom: 20 }}>
-                    Selecciona una conversación de la lista lateral o haz clic en cualquier especialista
-                    del Directorio para coordinar presupuestos, trabajos o valoraciones.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setPestanaDirectorio("contactos")}
-                    style={{
-                      background: "linear-gradient(135deg, #0d9488, #2563eb)",
-                      color: "white",
-                      border: "none",
-                      padding: "10px 22px",
-                      borderRadius: 12,
-                      fontWeight: 700,
-                      fontSize: 14,
-                      cursor: "pointer"
-                    }}
-                  >
-                    Explorar Contactos Disponibles →
-                  </button>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--surface)", border: "1px solid var(--border)", padding: "6px 14px", borderRadius: 12 }}>
+                    <span style={{ fontSize: 13, color: "var(--text-muted)" }}>Total registrados:</span>
+                    <strong style={{ fontSize: 14, color: "var(--primary)" }}>{contactosFiltrados.length} perfiles</strong>
+                  </div>
+                </div>
+
+                {/* Filtros rápidos por Rubro */}
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {[
+                    { id: "Todos", label: "🌟 Todos los Rubros" },
+                    { id: "Electricidad", label: "⚡ Electricidad" },
+                    { id: "Plomería", label: "🔧 Plomería" },
+                    { id: "Albañilería", label: "🧱 Albañilería" },
+                    { id: "Pintura", label: "🎨 Pintura" },
+                    { id: "Carpintería", label: "🚪 Carpintería" },
+                    { id: "Climatización", label: "❄️ Climatización" },
+                    { id: "Limpieza", label: "🧹 Limpieza" },
+                    { id: "Jardinería", label: "🌳 Jardinería" },
+                    { id: "Empresas", label: "🏢 Empresas" }
+                  ].map(r => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => setFiltroRubroDirectorio(r.id)}
+                      style={{
+                        padding: "6px 14px",
+                        fontSize: 12,
+                        borderRadius: 10,
+                        border: filtroRubroDirectorio === r.id ? "1.5px solid var(--primary)" : "1px solid var(--border)",
+                        background: filtroRubroDirectorio === r.id ? "var(--primary-light)" : "var(--surface-card)",
+                        color: filtroRubroDirectorio === r.id ? "var(--primary)" : "var(--text)",
+                        cursor: "pointer",
+                        fontWeight: filtroRubroDirectorio === r.id ? 800 : 600,
+                        transition: "all 0.15s ease"
+                      }}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Rejilla de Tarjetas de Perfiles Suscriptos */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+                    gap: 16
+                  }}
+                >
+                  {contactosFiltrados.map((u) => {
+                    const nombre = u.nombre || u.email;
+                    const esEmpresa = u.rol === "EMPRESA";
+                    const esAdm = u.rol === "ADMIN";
+                    const oficio = u.perfil?.oficio || "Especialista en Oficios y Servicios";
+                    const zona = u.perfil?.zonaTrabajo || "Cruz del Eje y Alrededores";
+
+                    return (
+                      <div
+                        key={u.id}
+                        style={{
+                          background: "var(--surface-card)",
+                          border: esEmpresa ? "1.5px solid #38bdf8" : "1px solid var(--border)",
+                          borderRadius: 16,
+                          padding: 20,
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 14,
+                          boxShadow: "0 2px 10px rgba(0,0,0,0.04)"
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <div
+                            style={{
+                              width: 50,
+                              height: 50,
+                              borderRadius: "50%",
+                              background: esEmpresa ? "linear-gradient(135deg, #0284c7, #0369a1)" : "linear-gradient(135deg, #0d9488, #2563eb)",
+                              color: "white",
+                              display: "grid",
+                              placeItems: "center",
+                              fontSize: 18,
+                              fontWeight: 800,
+                              flexShrink: 0
+                            }}
+                          >
+                            {esEmpresa ? "🏢" : esAdm ? "👑" : nombre.charAt(0).toUpperCase()}
+                          </div>
+
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                              <strong style={{ fontSize: 15, color: "var(--text)" }}>{nombre}</strong>
+                              {esEmpresa ? (
+                                <span style={{ fontSize: 10, background: "#e0f2fe", color: "#0369a1", padding: "1px 6px", borderRadius: 6, fontWeight: 800 }}>
+                                  🏢 Empresa
+                                </span>
+                              ) : esAdm ? (
+                                <span style={{ fontSize: 10, background: "#fef3c7", color: "#b45309", padding: "1px 6px", borderRadius: 6, fontWeight: 800 }}>
+                                  👑 Admin
+                                </span>
+                              ) : (
+                                <span style={{ fontSize: 10, background: "#e0f2fe", color: "#0369a1", padding: "1px 6px", borderRadius: 6, fontWeight: 700 }}>
+                                  ✔ Verificado
+                                </span>
+                              )}
+                            </div>
+                            <span style={{ fontSize: 11, color: "#16a34a", fontWeight: 600 }}>
+                              ● Disponible para trabajos
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Profesión Destacada */}
+                        <div
+                          style={{
+                            background: "var(--surface-soft)",
+                            border: "1px solid var(--border-subtle)",
+                            borderRadius: 10,
+                            padding: "8px 12px"
+                          }}
+                        >
+                          <span style={{ fontSize: 11, color: "var(--text-muted)", display: "block", textTransform: "uppercase", fontWeight: 700 }}>
+                            Profesión / Rubro:
+                          </span>
+                          <strong style={{ fontSize: 13, color: "var(--primary)", display: "block", marginTop: 2, lineHeight: 1.3 }}>
+                            {oficio}
+                          </strong>
+                        </div>
+
+                        {/* Datos adicionales: Zona y Calificación */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "var(--text-secondary)" }}>
+                          <span>📍 {zona}</span>
+                          <span style={{ fontWeight: 700, color: "#d97706" }}>⭐⭐⭐⭐⭐ 5.0</span>
+                        </div>
+
+                        {/* Botón de Contacto */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReceptor(nombre);
+                          }}
+                          style={{
+                            marginTop: "auto",
+                            background: "linear-gradient(135deg, #0d9488 0%, #2563eb 100%)",
+                            color: "white",
+                            border: "none",
+                            borderRadius: 10,
+                            padding: "10px 14px",
+                            fontSize: 13,
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 8,
+                            boxShadow: "0 2px 8px rgba(13, 148, 136, 0.25)"
+                          }}
+                        >
+                          <span>💬</span>
+                          <span>Contactar por Chat Seguro</span>
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ) : (
@@ -1094,16 +1352,42 @@ export default function Mensajes() {
                 <div className="chat-conversation-header">
                   <button type="button" className="mobile-chat-back" onClick={() => setReceptor("")} aria-label="Volver a conversaciones">←</button>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div className="chat-avatar-circle" style={{ width: 42, height: 42, minWidth: 42 }}>
-                      {receptor.charAt(0).toUpperCase()}
+                    <div
+                      className="chat-avatar-circle"
+                      style={{
+                        width: 44,
+                        height: 44,
+                        minWidth: 44,
+                        background: contactoActivo?.rol === "EMPRESA" ? "linear-gradient(135deg, #0284c7, #0369a1)" : "linear-gradient(135deg, #0d9488, #2563eb)"
+                      }}
+                    >
+                      {contactoActivo?.rol === "EMPRESA" ? "🏢" : receptor.charAt(0).toUpperCase()}
                       <span className="online-status-dot"></span>
                     </div>
                     <div>
-                      <h3 style={{ margin: 0, fontSize: 15.5, fontWeight: 800, color: "var(--text)" }}>
-                        {receptor}
-                      </h3>
-                      <span style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>
-                        ● En línea · Disponible para consultas
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "var(--text)" }}>
+                          {receptor}
+                        </h3>
+                        {contactoActivo?.rol === "EMPRESA" ? (
+                          <span style={{ fontSize: 10.5, background: "#e0f2fe", color: "#0369a1", padding: "1px 7px", borderRadius: 6, fontWeight: 800 }}>
+                            🏢 Cuenta Empresa
+                          </span>
+                        ) : contactoActivo?.rol === "ADMIN" ? (
+                          <span style={{ fontSize: 10.5, background: "#fef3c7", color: "#b45309", padding: "1px 7px", borderRadius: 6, fontWeight: 800 }}>
+                            👑 Administrador
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 10.5, color: "#0369a1", background: "#e0f2fe", padding: "1px 7px", borderRadius: 8, fontWeight: 700 }}>
+                            ✔ Matrícula Verificada
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ fontSize: 12.5, color: "var(--primary)", fontWeight: 700, display: "block", marginTop: 2 }}>
+                        {contactoActivo?.perfil?.oficio || "Especialista en Oficios y Servicios"}
+                      </span>
+                      <span style={{ fontSize: 11, color: "#16a34a", fontWeight: 600 }}>
+                        ● En línea {contactoActivo?.perfil?.zonaTrabajo ? `· 📍 ${contactoActivo.perfil.zonaTrabajo}` : "· Disponible para coordinar"}
                       </span>
                     </div>
                   </div>
@@ -1248,6 +1532,52 @@ export default function Mensajes() {
                     )}
                   </div>
                 )}
+
+                {/* Banner de Seguridad Antifraude y Canal Seguro */}
+                <div
+                  style={{
+                    margin: "10px 20px 0",
+                    padding: "10px 16px",
+                    borderRadius: 12,
+                    background: "rgba(13, 148, 136, 0.08)",
+                    border: "1px solid rgba(13, 148, 136, 0.3)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    flexWrap: "wrap",
+                    fontSize: 12.5
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 240 }}>
+                    <span style={{ fontSize: 20 }}>🛡️</span>
+                    <span style={{ color: "var(--text-secondary)", lineHeight: 1.4 }}>
+                      <strong style={{ color: "var(--text)" }}>Canal Seguro Antifraude:</strong> Por tu seguridad, coordina presupuestos y acuerdos exclusivamente dentro de este chat para evitar hackeos y estafas externas.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setMostrarCheckoutMP(true)}
+                    style={{
+                      background: "#009ee3",
+                      color: "white",
+                      border: "none",
+                      borderRadius: 8,
+                      padding: "7px 14px",
+                      fontSize: 12,
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      boxShadow: "0 2px 6px rgba(0, 158, 227, 0.3)"
+                    }}
+                    title="Pagar seña del trabajo de forma segura con Mercado Pago"
+                  >
+                    <span>💳</span>
+                    <span>Pagar Seña con Mercado Pago</span>
+                  </button>
+                </div>
 
                 {/* Banner de Publicación Vinculada si vino desde Contactar */}
                 {publicacionContexto && (
@@ -1661,6 +1991,27 @@ export default function Mensajes() {
                   </div>
                 )}
 
+                {/* Aviso Preventivo Antifraude / Antibypass en vivo */}
+                {advertenciaAntiBypass && (
+                  <div
+                    style={{
+                      margin: "0 20px 8px",
+                      padding: "8px 14px",
+                      background: "#fffbeb",
+                      border: "1px solid #fde68a",
+                      borderRadius: 10,
+                      color: "#92400e",
+                      fontSize: 12,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8
+                    }}
+                  >
+                    <span style={{ fontSize: 16 }}>🛡️</span>
+                    <span style={{ flex: 1, lineHeight: 1.4 }}>{advertenciaAntiBypass}</span>
+                  </div>
+                )}
+
                 {/* Barra de Redacción de Mensaje */}
                 <div className="chat-input-bar">
                   <input
@@ -1823,6 +2174,28 @@ export default function Mensajes() {
           />
         </div>
       )}
+
+      {/* Modal de Pago Seguro Mercado Pago dentro del Chat */}
+      <MercadoPagoModal
+        abierto={mostrarCheckoutMP}
+        alCerrar={() => setMostrarCheckoutMP(false)}
+        concepto={`Seña de Trabajo acordada por Chat con ${receptor}`}
+        monto={15000}
+        destinatario={receptor}
+        alCompletarPago={(datos) => {
+          // Enviar confirmación al chat automáticamente
+          const textoPago = `💳 COMPROBANTE OFICIAL MERCADO PAGO:\nOperación: #${datos.operacionId}\nSeña abonada: $${datos.monto.toLocaleString()} ARS\nDestinatario: ${datos.destinatario}\nEstado: Aprobado y retenido con Garantía de Satisfacción.`;
+          enviarMensaje({
+            emisor,
+            receptor,
+            contenido: textoPago
+          }).then(() => {
+            if (receptor && emisor) {
+              obtenerConversacion(emisor, receptor).then(res => setMensajes(res || []));
+            }
+          });
+        }}
+      />
     </div>
   );
 }

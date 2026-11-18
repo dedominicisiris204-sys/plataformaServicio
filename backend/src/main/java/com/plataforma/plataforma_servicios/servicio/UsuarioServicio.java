@@ -53,6 +53,14 @@ public class UsuarioServicio {
         usuario.setNombre(nombre);
         usuario.setEmail(email);
 
+        if (usuario.getRol() == null || usuario.getRol().isBlank()) {
+            if (email.contains("admin@") || email.equals("admin@plataforma.com") || nombre.equalsIgnoreCase("admin")) {
+                usuario.setRol("ADMIN");
+            } else {
+                usuario.setRol("ESPECIALISTA");
+            }
+        }
+
         boolean emailEnUso = usuario.getId() == null
                 ? usuarioRepository.existsByEmailIgnoreCase(email)
                 : usuarioRepository.existsByEmailIgnoreCaseAndIdNot(email, usuario.getId());
@@ -85,6 +93,13 @@ public class UsuarioServicio {
         }
 
         Usuario usuario = encontrado.get();
+        if (usuario.getRol() == null || usuario.getRol().isBlank()) {
+            if (usuario.getEmail().contains("admin@") || usuario.getEmail().equalsIgnoreCase("admin@plataforma.com") || usuario.getNombre().equalsIgnoreCase("admin")) {
+                usuario.setRol("ADMIN");
+            } else {
+                usuario.setRol("ESPECIALISTA");
+            }
+        }
         String guardada = usuario.getPassword();
         if (guardada == null) {
             return Optional.empty();
