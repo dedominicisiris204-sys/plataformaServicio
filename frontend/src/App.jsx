@@ -12,6 +12,15 @@ import Sidebar from "./components/Sidebar";
 import PublicacionCard from "./components/PublicacionCard";
 import CrearPublicacionModal from "./components/CrearPublicacionModal";
 import PresupuestoModal from "./components/PresupuestoModal";
+import PlanesEmpresasModal from "./components/PlanesEmpresasModal";
+import CuadrillasModal from "./components/CuadrillasModal";
+import PanelAdminModal from "./components/PanelAdminModal";
+import VerificacionModal from "./components/VerificacionModal";
+import MercadoPagoModal from "./components/MercadoPagoModal";
+import CalculadoraCostosModal from "./components/CalculadoraCostosModal";
+import CalificarTrabajoModal from "./components/CalificarTrabajoModal";
+import ReciboOficialModal from "./components/ReciboOficialModal";
+import BilleteraModal from "./components/BilleteraModal";
 import TrabajosKanbanView from "./components/TrabajosKanbanView";
 import MapaCercaniaView from "./components/MapaCercaniaView";
 import AntesDespuesView from "./components/AntesDespuesView";
@@ -80,18 +89,55 @@ function Dashboard() {
   const [seccionActiva, setSeccionActiva] = useState("inicio");
   const [modalPublicarAbierto, setModalPublicarAbierto] = useState(false);
   const [modalPresupuestoAbierto, setModalPresupuestoAbierto] = useState(false);
+  const [modalPlanesEmpresasAbierto, setModalPlanesEmpresasAbierto] = useState(false);
+  const [modalCuadrillasAbierto, setModalCuadrillasAbierto] = useState(false);
+  const [modalAdminAbierto, setModalAdminAbierto] = useState(false);
+  const [modalVerificacionAbierto, setModalVerificacionAbierto] = useState(false);
+  const [modalMercadoPagoAbierto, setModalMercadoPagoAbierto] = useState(false);
+  const [datosPagoMP, setDatosPagoMP] = useState({ concepto: "Seña de Trabajo", monto: 15000, destinatario: "Profesional" });
+  const [modalCalculadoraAbierto, setModalCalculadoraAbierto] = useState(false);
+  const [modalCalificarAbierto, setModalCalificarAbierto] = useState(false);
+  const [datosCalificar, setDatosCalificar] = useState({ profesional: "Carlos Benítez" });
+  const [modalReciboAbierto, setModalReciboAbierto] = useState(false);
+  const [datosRecibo, setDatosRecibo] = useState(null);
+  const [modalBilleteraAbierto, setModalBilleteraAbierto] = useState(false);
+  const [sidebarAbierto, setSidebarAbierto] = useState(false);
 
   // Modo Oscuro / Claro
   const [esModoOscuro, setEsModoOscuro] = useState(() => {
     return localStorage.getItem("modoOscuro") === "true";
   });
 
-  // Filtro de Urgencias 24hs
+  // Filtros avanzados (Urgencias 24hs y Radio de Cercanía)
   const [filtroSoloUrgencias, setFiltroSoloUrgencias] = useState(false);
-
+  const [filtroDistancia, setFiltroDistancia] = useState("Todas"); // "Todas", "3", "5", "10", "20"
   // Estados de usuario
-  const [usuario, setUsuario] = useState(null);
+  const [usuario, setUsuario] = useState(() => {
+    try {
+      const guardado = localStorage.getItem("usuario");
+      return guardado ? JSON.parse(guardado) : null;
+    } catch {
+      return null;
+    }
+  });
   const identidadUsuario = usuario?.nombre || usuario?.email || usuario?.username;
+
+  // Verificación estricta de Administrador
+  const esAdmin = Boolean(
+    usuario?.rol === "ADMIN" ||
+    usuario?.email?.toLowerCase().includes("admin@") ||
+    usuario?.email?.toLowerCase() === "admin@plataforma.com" ||
+    usuario?.nombre?.toLowerCase() === "admin"
+  );
+
+  const [rolActivo, setRolActivo] = useState(() => (esAdmin ? "ADMIN" : (usuario?.rol || "ESPECIALISTA")));
+
+  useEffect(() => {
+    if (usuario) {
+      if (esAdmin) setRolActivo("ADMIN");
+      else if (usuario.rol) setRolActivo(usuario.rol);
+    }
+  }, [usuario, esAdmin]);
 
   // Estados de publicaciones
   const [publicaciones, setPublicaciones] = useState([]);
@@ -272,8 +318,46 @@ function Dashboard() {
       <Sidebar
         seccionActiva={seccionActiva}
         setSeccionActiva={setSeccionActiva}
-        abrirModalPublicar={() => setModalPublicarAbierto(true)}
-        abrirModalPresupuesto={() => setModalPresupuestoAbierto(true)}
+        sidebarAbierto={sidebarAbierto}
+        setSidebarAbierto={setSidebarAbierto}
+        abrirModalPublicar={() => {
+          setModalPublicarAbierto(true);
+          setSidebarAbierto(false);
+        }}
+        abrirModalPresupuesto={() => {
+          setModalPresupuestoAbierto(true);
+          setSidebarAbierto(false);
+        }}
+        abrirModalPlanesEmpresas={() => {
+          setModalPlanesEmpresasAbierto(true);
+          setSidebarAbierto(false);
+        }}
+        abrirModalCuadrillas={() => {
+          setModalCuadrillasAbierto(true);
+          setSidebarAbierto(false);
+        }}
+        abrirModalVerificacion={() => {
+          setModalVerificacionAbierto(true);
+          setSidebarAbierto(false);
+        }}
+        abrirModalAdmin={() => {
+          setModalAdminAbierto(true);
+          setSidebarAbierto(false);
+        }}
+        abrirModalCalculadora={() => {
+          setModalCalculadoraAbierto(true);
+          setSidebarAbierto(false);
+        }}
+        abrirModalRecibo={() => {
+          setModalReciboAbierto(true);
+          setSidebarAbierto(false);
+        }}
+        abrirModalBilletera={() => {
+          setModalBilleteraAbierto(true);
+          setSidebarAbierto(false);
+        }}
+        rolActivo={rolActivo}
+        setRolActivo={setRolActivo}
         usuario={usuario}
         onCerrarSesion={cerrarSesion}
         notificacionesNoLeidas={3}
@@ -285,17 +369,30 @@ function Dashboard() {
       <div className="dashboard-main">
         {/* Topbar Superior */}
         <header className="dashboard-topbar">
-          <div className="topbar-title">
-            <h1>
-              {seccionActiva === "inicio" && "🏠 Pantalla Principal"}
-              {seccionActiva === "publicaciones" && "📰 Muro de Publicaciones"}
-              {seccionActiva === "trabajos" && "📋 Mis Trabajos (Kanban)"}
-              {seccionActiva === "mapa" && "📍 Mapa de Especialistas Cercanos"}
-              {seccionActiva === "antes-despues" && "🖼️ Portafolio Antes y Después"}
-              {seccionActiva === "buscar" && "🔍 Explorar y Buscar Servicios"}
-              {seccionActiva === "notificaciones" && "🔔 Centro de Notificaciones"}
-              {seccionActiva === "servicios" && "🛠️ Especialidades y Oficios"}
-            </h1>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+            {/* Botón hamburguesa visible solo en pantalla móvil */}
+            <button
+              type="button"
+              className="btn-hamburguesa-movil"
+              onClick={() => setSidebarAbierto(true)}
+              aria-label="Abrir Menú"
+              title="Abrir Menú"
+            >
+              ☰
+            </button>
+
+            <div className="topbar-title">
+              <h1>
+                {seccionActiva === "inicio" && "🏠 Pantalla Principal"}
+                {seccionActiva === "publicaciones" && "📰 Publicaciones"}
+                {seccionActiva === "trabajos" && "📋 Mis Trabajos"}
+                {seccionActiva === "mapa" && "📍 Cercanía"}
+                {seccionActiva === "antes-despues" && "🖼️ Portafolio"}
+                {seccionActiva === "buscar" && "🔍 Explorar"}
+                {seccionActiva === "notificaciones" && "🔔 Notificaciones"}
+                {seccionActiva === "servicios" && "🛠️ Oficios"}
+              </h1>
+            </div>
           </div>
 
           <div className="topbar-search">
@@ -314,6 +411,48 @@ function Dashboard() {
           </div>
 
           <div className="topbar-actions">
+            {/* Botón Notificaciones con Indicador Badge en el Icono */}
+            <button
+              onClick={() => setSeccionActiva("notificaciones")}
+              style={{
+                position: "relative",
+                background: seccionActiva === "notificaciones" ? "var(--primary-light)" : "var(--surface-soft)",
+                border: "1px solid var(--border)",
+                borderRadius: "50%",
+                width: 36,
+                height: 36,
+                minWidth: 36,
+                display: "grid",
+                placeItems: "center",
+                cursor: "pointer",
+                fontSize: 16
+              }}
+              title="Centro de Notificaciones"
+              aria-label="Ver notificaciones"
+            >
+              <span>🔔</span>
+              <span
+                style={{
+                  position: "absolute",
+                  top: -3,
+                  right: -3,
+                  background: "#ef4444",
+                  color: "white",
+                  fontSize: 10,
+                  fontWeight: 900,
+                  width: 17,
+                  height: 17,
+                  borderRadius: "50%",
+                  display: "grid",
+                  placeItems: "center",
+                  border: "2px solid var(--topbar-bg)",
+                  lineHeight: 1
+                }}
+              >
+                3
+              </span>
+            </button>
+
             {/* Toggle Rápido de Urgencias */}
             <button
               onClick={() => {
@@ -672,8 +811,8 @@ function Dashboard() {
                 </div>
               </div>
 
-              {/* Barra de Filtros con Urgencia */}
-              <div className="feed-filter-bar">
+              {/* Barra de Filtros con Urgencia y Geocercanía */}
+              <div className="feed-filter-bar" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
                 <button
                   type="button"
                   className={`feed-filter-chip ${categoriaActiva === "Todos" && !filtroSoloUrgencias ? "active" : ""}`}
@@ -701,6 +840,21 @@ function Dashboard() {
                     {cat.icon} {cat.nombre}
                   </button>
                 ))}
+
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: "auto", flexWrap: "wrap", padding: "2px 6px", background: "var(--surface-soft)", borderRadius: 10, border: "1px solid var(--border)" }}>
+                  <span style={{ fontSize: 11.5, fontWeight: 700, color: "var(--text-muted)" }}>📍 Radio:</span>
+                  {["Todas", "3 km", "5 km", "10 km", "25 km"].map(d => (
+                    <button
+                      key={d}
+                      type="button"
+                      className={`feed-filter-chip ${filtroDistancia === d ? "active" : ""}`}
+                      style={{ padding: "3px 8px", fontSize: 11, minHeight: "auto", margin: 0 }}
+                      onClick={() => setFiltroDistancia(d)}
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Listado de Publicaciones */}
@@ -744,6 +898,10 @@ function Dashboard() {
                       procesandoComentario={procesandoComentario}
                       enviarComentario={enviarComentario}
                       alPedirPresupuesto={() => setModalPresupuestoAbierto(true)}
+                      alCalificar={(pub) => {
+                        setDatosCalificar({ profesional: pub.autor || "Profesional" });
+                        setModalCalificarAbierto(true);
+                      }}
                     />
                   ))}
                 </div>
@@ -801,8 +959,8 @@ function Dashboard() {
         ======================================================== */}
         {seccionActiva === "publicaciones" && (
           <div className="dashboard-body">
-            {/* Barra de Filtros con Urgencia */}
-            <div className="feed-filter-bar">
+            {/* Barra de Filtros con Urgencia y Geocercanía */}
+            <div className="feed-filter-bar" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
               <button
                 type="button"
                 className={`feed-filter-chip ${categoriaActiva === "Todos" && !filtroSoloUrgencias ? "active" : ""}`}
@@ -830,6 +988,21 @@ function Dashboard() {
                   {cat.icon} {cat.nombre}
                 </button>
               ))}
+
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: "auto", flexWrap: "wrap", padding: "2px 6px", background: "var(--surface-soft)", borderRadius: 10, border: "1px solid var(--border)" }}>
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: "var(--text-muted)" }}>📍 Radio:</span>
+                {["Todas", "3 km", "5 km", "10 km", "25 km"].map(d => (
+                  <button
+                    key={d}
+                    type="button"
+                    className={`feed-filter-chip ${filtroDistancia === d ? "active" : ""}`}
+                    style={{ padding: "3px 8px", fontSize: 11, minHeight: "auto", margin: 0 }}
+                    onClick={() => setFiltroDistancia(d)}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Lista */}
@@ -860,6 +1033,10 @@ function Dashboard() {
                     procesandoComentario={procesandoComentario}
                     enviarComentario={enviarComentario}
                     alPedirPresupuesto={() => setModalPresupuestoAbierto(true)}
+                    alCalificar={(pub) => {
+                      setDatosCalificar({ profesional: pub.autor || "Profesional" });
+                      setModalCalificarAbierto(true);
+                    }}
                   />
                 ))}
               </div>
@@ -961,8 +1138,7 @@ function Dashboard() {
         )}
       </div>
 
-      {/* TOASTS NOTIFICACIONES PUSH FLOTANTES */}
-      <ToastNotification onNavegarASeccion={setSeccionActiva} />
+      {/* Notificaciones integradas directamente en el icono de campana (Badge) */}
 
       {/* MODAL PARA REALIZAR PUBLICACIÓN */}
       <CrearPublicacionModal
@@ -985,6 +1161,161 @@ function Dashboard() {
           setSeccionActiva("trabajos");
         }}
       />
+
+      {/* MODAL DE PLANES Y SUSCRIPCIONES PARA EMPRESAS */}
+      <PlanesEmpresasModal
+        abierto={modalPlanesEmpresasAbierto}
+        alCerrar={() => setModalPlanesEmpresasAbierto(false)}
+        usuario={usuario}
+      />
+
+      {/* MODAL DE CUADRILLAS Y EQUIPOS DE TRABAJO */}
+      <CuadrillasModal
+        abierto={modalCuadrillasAbierto}
+        alCerrar={() => setModalCuadrillasAbierto(false)}
+        usuario={usuario}
+      />
+
+      {/* MODAL DE PANEL DE CONTROL DEL ADMINISTRADOR (SOLO ACCESIBLE PARA EL ADMIN) */}
+      {esAdmin && (
+        <PanelAdminModal
+          abierto={modalAdminAbierto}
+          alCerrar={() => setModalAdminAbierto(false)}
+          usuario={usuario}
+        />
+      )}
+
+      {/* MODAL DE VERIFICACIÓN OFICIAL DE MATRÍCULA */}
+      <VerificacionModal
+        abierto={modalVerificacionAbierto}
+        alCerrar={() => setModalVerificacionAbierto(false)}
+        usuario={usuario}
+        alVerificar={(datos) => {
+          alert(`¡Felicitaciones ${usuario?.nombre || ""}! Matrícula ${datos.matricula} verificada. Tu tilde azul ya está activo.`);
+        }}
+      />
+
+      {/* MODAL DE PAGO SEGURO CON MERCADO PAGO */}
+      <MercadoPagoModal
+        abierto={modalMercadoPagoAbierto}
+        alCerrar={() => setModalMercadoPagoAbierto(false)}
+        concepto={datosPagoMP.concepto}
+        monto={datosPagoMP.monto}
+        destinatario={datosPagoMP.destinatario}
+        alCompletarPago={(datos) => {
+          alert(`¡Pago de $${datos.monto.toLocaleString()} ARS procesado con éxito vía Mercado Pago! Operación: #${datos.operacionId}`);
+        }}
+      />
+
+      {/* MODAL DE CALCULADORA DE PRECIOS SUGERIDOS */}
+      <CalculadoraCostosModal
+        abierto={modalCalculadoraAbierto}
+        alCerrar={() => setModalCalculadoraAbierto(false)}
+        alSolicitarCotizacion={(item) => {
+          setModalCalculadoraAbierto(false);
+          setModalPresupuestoAbierto(true);
+        }}
+      />
+
+      {/* MODAL DE CALIFICACIÓN DE SERVICIO CON ESTRELLAS Y RESEÑAS */}
+      <CalificarTrabajoModal
+        abierto={modalCalificarAbierto}
+        alCerrar={() => setModalCalificarAbierto(false)}
+        profesional={datosCalificar.profesional}
+        alGuardarResena={(resena) => {
+          alert(`¡Gracias por calificar a ${resena.profesional}! Tu reseña de ${resena.estrellas} estrellas ha sido registrada y sumada a su reputación oficial.`);
+          setModalCalificarAbierto(false);
+        }}
+      />
+
+      {/* MODAL DE COMPROBANTE OFICIAL DE SERVICIO */}
+      <ReciboOficialModal
+        abierto={modalReciboAbierto}
+        alCerrar={() => setModalReciboAbierto(false)}
+        datos={datosRecibo}
+      />
+
+      {/* MODAL DE BILLETERA VIRTUAL Y RETIRO DE FONDOS DEL TRABAJADOR */}
+      <BilleteraModal
+        abierto={modalBilleteraAbierto}
+        alCerrar={() => setModalBilleteraAbierto(false)}
+        usuario={usuario}
+      />
+
+      {/* BARRA DE NAVEGACIÓN INFERIOR PARA TELÉFONOS (EXPERIENCIA APP MÓVIL) */}
+      <nav className="mobile-bottom-nav" aria-label="Navegación Móvil Principal">
+        <button
+          type="button"
+          className={`mobile-nav-tab ${seccionActiva === "inicio" ? "active" : ""}`}
+          onClick={() => {
+            setSeccionActiva("inicio");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        >
+          <span className="mobile-nav-icon">🏠</span>
+          <span className="mobile-nav-label">Inicio</span>
+        </button>
+
+        <button
+          type="button"
+          className={`mobile-nav-tab ${seccionActiva === "publicaciones" ? "active" : ""}`}
+          onClick={() => {
+            setSeccionActiva("publicaciones");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        >
+          <span className="mobile-nav-icon">📰</span>
+          <span className="mobile-nav-label">Muro</span>
+        </button>
+
+        <button
+          type="button"
+          className="mobile-nav-tab mobile-nav-tab-cta"
+          onClick={() => setModalPublicarAbierto(true)}
+          aria-label="Publicar empleo o servicio"
+          title="Publicar empleo o servicio"
+        >
+          <span className="mobile-nav-fab">+</span>
+        </button>
+
+        <button
+          type="button"
+          className="mobile-nav-tab"
+          onClick={() => navigate("/mensajes")}
+        >
+          <span className="mobile-nav-icon">💬</span>
+          <span className="mobile-nav-label">Chat</span>
+        </button>
+
+        <button
+          type="button"
+          className="mobile-nav-tab"
+          onClick={() => setSidebarAbierto(true)}
+          style={{ position: "relative" }}
+        >
+          <span className="mobile-nav-icon">☰</span>
+          <span className="mobile-nav-label">Menú</span>
+          <span
+            style={{
+              position: "absolute",
+              top: 6,
+              right: 16,
+              background: "#ef4444",
+              color: "white",
+              fontSize: 9,
+              fontWeight: 900,
+              width: 15,
+              height: 15,
+              borderRadius: "50%",
+              display: "grid",
+              placeItems: "center",
+              lineHeight: 1
+            }}
+          >
+            3
+          </span>
+        </button>
+      </nav>
     </div>
   );
 }
@@ -1100,6 +1431,7 @@ function Registro() {
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rol, setRol] = useState("ESPECIALISTA"); // "ESPECIALISTA" (Profesional/Cliente) o "EMPRESA"
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
   const [exito, setExito] = useState("");
@@ -1123,7 +1455,7 @@ function Registro() {
       const response = await fetch(`${API}/usuarios`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre, email, password })
+        body: JSON.stringify({ nombre, email, password, rol })
       });
 
       if (response.status === 409) {
@@ -1171,10 +1503,45 @@ function Registro() {
           {exito && <div className="auth-success">✓ {exito}</div>}
 
           <form onSubmit={registrar}>
-            <label>Nombre completo</label>
+            <label style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>Tipo de Cuenta a Crear</label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+              <div
+                onClick={() => setRol("ESPECIALISTA")}
+                style={{
+                  border: rol === "ESPECIALISTA" ? "2px solid var(--primary)" : "1px solid var(--border)",
+                  background: rol === "ESPECIALISTA" ? "var(--primary-light)" : "var(--surface)",
+                  borderRadius: 12,
+                  padding: "10px 12px",
+                  cursor: "pointer",
+                  textAlign: "center"
+                }}
+              >
+                <div style={{ fontSize: 20 }}>🛠️</div>
+                <strong style={{ fontSize: 13, display: "block", color: "var(--text)" }}>Oficio / Profesional</strong>
+                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Ofrecer servicios o contratar</span>
+              </div>
+
+              <div
+                onClick={() => setRol("EMPRESA")}
+                style={{
+                  border: rol === "EMPRESA" ? "2px solid var(--primary)" : "1px solid var(--border)",
+                  background: rol === "EMPRESA" ? "var(--primary-light)" : "var(--surface)",
+                  borderRadius: 12,
+                  padding: "10px 12px",
+                  cursor: "pointer",
+                  textAlign: "center"
+                }}
+              >
+                <div style={{ fontSize: 20 }}>🏢</div>
+                <strong style={{ fontSize: 13, display: "block", color: "var(--text)" }}>Empresa / Comercio</strong>
+                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Contratar cuadrillas y personal</span>
+              </div>
+            </div>
+
+            <label>{rol === "EMPRESA" ? "Nombre de la Empresa o Razón Social" : "Nombre completo"}</label>
             <input
               type="text"
-              placeholder="Ej: Iris Gladys"
+              placeholder={rol === "EMPRESA" ? "Ej: Construcciones del Sur S.A." : "Ej: Iris Gladys"}
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               required

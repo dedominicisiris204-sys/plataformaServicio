@@ -32,6 +32,9 @@ public class Usuario implements Serializable {
     @Column(name = "fecha_registro", nullable = false)
     private LocalDate fechaRegistro;
 
+    @Column(name = "rol", length = 30)
+    private String rol = "ESPECIALISTA"; // ADMIN, ESPECIALISTA, EMPRESA
+
     @OneToOne(
         mappedBy = "usuario",
         fetch = FetchType.LAZY,
@@ -43,6 +46,9 @@ public class Usuario implements Serializable {
     protected void onCreate() {
         if (fechaRegistro == null) {
             fechaRegistro = LocalDate.now();
+        }
+        if (rol == null || rol.isBlank()) {
+            rol = "ESPECIALISTA";
         }
     }
 }
