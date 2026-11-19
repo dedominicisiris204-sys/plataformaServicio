@@ -14,19 +14,21 @@ import java.util.UUID;
 @CrossOrigin(origins = "*")
 public class MercadoPagoControlador {
 
-    @Value("${mercadopago.access-token}")
+    @Value("${mercadopago.access-token:}")
     private String accessToken;
 
-    @Value("${mercadopago.public-key}")
+    @Value("${mercadopago.public-key:}")
     private String publicKey;
 
     @GetMapping("/config")
     public ResponseEntity<Map<String, Object>> obtenerConfiguracion() {
         Map<String, Object> resp = new HashMap<>();
-        boolean esTestDefault = accessToken == null || accessToken.contains("00000000");
+        boolean configurado = accessToken != null && !accessToken.isBlank()
+                && publicKey != null && !publicKey.isBlank();
+        boolean esTestDefault = !configurado || accessToken.contains("TEST-");
         resp.put("publicKey", publicKey);
         resp.put("modoSandbox", esTestDefault);
-        resp.put("activo", true);
+        resp.put("activo", configurado);
         return ResponseEntity.ok(resp);
     }
 
