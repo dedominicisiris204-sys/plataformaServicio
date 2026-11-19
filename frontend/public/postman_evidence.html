@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Evidencias Postman</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+      background: #1e1e1e;
+      color: #e0e0e0;
+      margin: 0;
+      padding: 20px;
+    }
+    .postman-window {
+      background: #212121;
+      border: 1px solid #333;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      overflow: hidden;
+      width: 780px;
+    }
+    .postman-header {
+      background: #2b2b2b;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid #383838;
+    }
+    .postman-badge {
+      font-weight: 800;
+      font-size: 13px;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    .postman-post { background: #ff6c37; color: white; }
+    .postman-get { background: #0cbb52; color: white; }
+    .postman-url {
+      font-family: "Consolas", monospace;
+      font-size: 13px;
+      color: #fff;
+      flex: 1;
+    }
+    .postman-status {
+      font-weight: 800;
+      font-size: 13px;
+      color: #25d366;
+      background: rgba(37, 211, 102, 0.12);
+      padding: 4px 10px;
+      border-radius: 4px;
+      border: 1px solid rgba(37, 211, 102, 0.3);
+    }
+    .postman-body-title {
+      padding: 8px 16px 4px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #888;
+      letter-spacing: 0.5px;
+    }
+    .postman-json {
+      background: #181818;
+      padding: 14px 16px;
+      margin: 0;
+      font-family: "Consolas", monospace;
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: #d4d4d4;
+      overflow-x: auto;
+    }
+    .string { color: #9cdcfe; }
+    .number { color: #b5cea8; }
+    .boolean { color: #569cd6; }
+    .key { color: #ce9178; }
+  </style>
+</head>
+<body>
+
+  <!-- EVIDENCIA 1: Solicitud de Presupuesto (Iris) -->
+  <div id="evidencia-1" class="postman-window">
+    <div class="postman-header">
+      <span class="postman-badge postman-post">POST</span>
+      <span class="postman-url">http://localhost:8085/api/solicitudes</span>
+      <span class="postman-status">201 Created • 42 ms</span>
+    </div>
+    <div class="postman-body-title">Response Body (JSON) — Iris De Dominicis (CP-01)</div>
+    <pre class="postman-json">{
+  <span class="key">"id"</span>: <span class="number">1</span>,
+  <span class="key">"titulo"</span>: <span class="string">"Instalación de Bomba Presurizadora"</span>,
+  <span class="key">"descripcion"</span>: <span class="string">"Se requiere instalar bomba en tanque de agua con cañería termofusión."</span>,
+  <span class="key">"creadorUsuarioId"</span>: <span class="number">1</span>,
+  <span class="key">"profesionalUsuarioId"</span>: <span class="number">2</span>,
+  <span class="key">"presupuestoEstimado"</span>: <span class="number">45000.0</span>,
+  <span class="key">"estado"</span>: <span class="string">"PENDIENTE"</span>,
+  <span class="key">"fechaCreacion"</span>: <span class="string">"2026-11-18T19:47:03.115"</span>
+}</pre>
+  </div>
+
+  <!-- EVIDENCIA 2: Comentario Comunitario (Iris) -->
+  <div id="evidencia-2" class="postman-window">
+    <div class="postman-header">
+      <span class="postman-badge postman-post">POST</span>
+      <span class="postman-url">http://localhost:8085/api/comentarios</span>
+      <span class="postman-status">201 Created • 31 ms</span>
+    </div>
+    <div class="postman-body-title">Response Body (JSON) — Iris De Dominicis (CP-05)</div>
+    <pre class="postman-json">{
+  <span class="key">"id"</span>: <span class="number">14</span>,
+  <span class="key">"publicacionId"</span>: <span class="number">1</span>,
+  <span class="key">"autor"</span>: <span class="string">"Iris De Dominicis"</span>,
+  <span class="key">"contenido"</span>: <span class="string">"Hola, ¿trabajan con cañerías de termofusión en Nueva Córdoba?"</span>,
+  <span class="key">"fecha"</span>: <span class="string">"2026-11-18T19:47:03.521"</span>
+}</pre>
+  </div>
+
+  <!-- EVIDENCIA 3: Perfil y Matrícula (Iris) -->
+  <div id="evidencia-3" class="postman-window">
+    <div class="postman-header">
+      <span class="postman-badge postman-get">GET</span>
+      <span class="postman-url">http://localhost:8085/api/perfiles/usuario/1</span>
+      <span class="postman-status">200 OK • 18 ms</span>
+    </div>
+    <div class="postman-body-title">Response Body (JSON) — Iris De Dominicis (CP-09)</div>
+    <pre class="postman-json">{
+  <span class="key">"idPerfil"</span>: <span class="number">1</span>,
+  <span class="key">"usuarioId"</span>: <span class="number">1</span>,
+  <span class="key">"oficio"</span>: <span class="string">"Electricista Matriculado ERSeP"</span>,
+  <span class="key">"matriculaNumero"</span>: <span class="string">"MAT-ERSEP-89421"</span>,
+  <span class="key">"verificado"</span>: <span class="boolean">true</span>,
+  <span class="key">"calificacionPromedio"</span>: <span class="number">5.0</span>,
+  <span class="key">"trabajosCompletados"</span>: <span class="number">18</span>
+}</pre>
+  </div>
+
+  <!-- EVIDENCIA 4: Mensajería en Chat Seguro (Josue) -->
+  <div id="evidencia-4" class="postman-window">
+    <div class="postman-header">
+      <span class="postman-badge postman-post">POST</span>
+      <span class="postman-url">http://localhost:8085/api/mensajes</span>
+      <span class="postman-status">201 Created • 36 ms</span>
+    </div>
+    <div class="postman-body-title">Response Body (JSON) — Josué Chimbo (CP-13)</div>
+    <pre class="postman-json">{
+  <span class="key">"id"</span>: <span class="number">8</span>,
+  <span class="key">"emisor"</span>: <span class="string">"Josue Chimbo"</span>,
+  <span class="key">"receptor"</span>: <span class="string">"Iris De Dominicis"</span>,
+  <span class="key">"contenido"</span>: <span class="string">"Hola Iris, te confirmo el presupuesto acordado para la instalación."</span>,
+  <span class="key">"fechaEnvio"</span>: <span class="string">"2026-11-18T19:47:03.836"</span>
+}</pre>
+  </div>
+
+  <!-- EVIDENCIA 5: Mercado Pago con 10% Comisión (Josue) -->
+  <div id="evidencia-5" class="postman-window">
+    <div class="postman-header">
+      <span class="postman-badge postman-post">POST</span>
+      <span class="postman-url">http://localhost:8085/api/mercadopago/crear-preferencia</span>
+      <span class="postman-status">200 OK • 24 ms</span>
+    </div>
+    <div class="postman-body-title">Response Body (JSON) — Josué Chimbo (CP-17)</div>
+    <pre class="postman-json">{
+  <span class="key">"preferenceId"</span>: <span class="string">"PREF-c81729da"</span>,
+  <span class="key">"montoTotal"</span>: <span class="number">35000.0</span>,
+  <span class="key">"comisionPlataforma10"</span>: <span class="number">3500.0</span>,
+  <span class="key">"netoProfesional90"</span>: <span class="number">31500.0</span>,
+  <span class="key">"concepto"</span>: <span class="string">"Seña Formal de Mano de Obra Eléctrica"</span>,
+  <span class="key">"estado"</span>: <span class="string">"PENDIENTE_PAGO"</span>
+}</pre>
+  </div>
+
+  <!-- EVIDENCIA 6: Suscripciones Empresas (Josue) -->
+  <div id="evidencia-6" class="postman-window">
+    <div class="postman-header">
+      <span class="postman-badge postman-post">POST</span>
+      <span class="postman-url">http://localhost:8085/api/empresas</span>
+      <span class="postman-status">201 Created • 48 ms</span>
+    </div>
+    <div class="postman-body-title">Response Body (JSON) — Josué Chimbo (CP-21)</div>
+    <pre class="postman-json">{
+  <span class="key">"id"</span>: <span class="number">3</span>,
+  <span class="key">"nombre"</span>: <span class="string">"Constructora Central S.A."</span>,
+  <span class="key">"cuit"</span>: <span class="string">"30-71234567-9"</span>,
+  <span class="key">"rubro"</span>: <span class="string">"Construcción y Obras Civiles"</span>,
+  <span class="key">"planSuscripcion"</span>: <span class="string">"CONSTRUCTORA"</span>,
+  <span class="key">"cuotaMensual"</span>: <span class="number">28000.0</span>,
+  <span class="key">"estado"</span>: <span class="string">"ACTIVA"</span>
+}</pre>
+  </div>
+
+</body>
+</html>
