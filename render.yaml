@@ -2,14 +2,10 @@ services:
   - type: web
     name: plataforma-servicio
     runtime: docker
-    plan: starter
+    plan: free
     dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /api/health
-    disk:
-      name: uploads
-      mountPath: /app/uploads
-      sizeGB: 1
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: production
