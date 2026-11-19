@@ -8,6 +8,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/publicaciones")
@@ -21,6 +24,7 @@ public class PublicacionController {
     }
 
     @GetMapping
+    @Transactional(readOnly = true)
     public ResponseEntity<?> obtenerTodas(
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size) {
@@ -29,17 +33,29 @@ public class PublicacionController {
 
         if (page != null && size != null && size > 0) {
             Pageable pageable = PageRequest.of(Math.max(0, page), size, ordenReciente);
-            return ResponseEntity.ok(publicacionRepository.findAll(pageable));
+            var publicaciones = publicacionRepository.findAll(pageable);
+            inicializarTags(publicaciones.getContent());
+            return ResponseEntity.ok(publicaciones);
         }
 
-        return ResponseEntity.ok(publicacionRepository.findAll(ordenReciente));
+        List<Publicacion> publicaciones = publicacionRepository.findAll(ordenReciente);
+        inicializarTags(publicaciones);
+        return ResponseEntity.ok(publicaciones);
     }
 
     @GetMapping("/{id}")
+    @Transactional(readOnly = true)
     public ResponseEntity<Publicacion> obtenerPorId(@PathVariable Long id) {
         return publicacionRepository.findById(id)
-                .map(ResponseEntity::ok)
+                .map(publicacion -> {
+                    inicializarTags(List.of(publicacion));
+                    return ResponseEntity.ok(publicacion);
+                })
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    private void inicializarTags(List<Publicacion> publicaciones) {
+        publicaciones.forEach(publicacion -> publicacion.getTags().size());
     }
 
     @PostMapping
