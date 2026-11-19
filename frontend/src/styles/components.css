@@ -7,23 +7,23 @@
     display: block;
   }
 
-  .hero {
+  .dashboard-container .hero {
     grid-template-columns: 1fr;
     text-align: center;
     padding-top: 55px;
   }
 
-  .hero-badge {
+  .dashboard-container .hero-badge {
     margin-left: auto;
     margin-right: auto;
   }
 
-  .hero-content > p {
+  .dashboard-container .hero-content > p {
     margin-left: auto;
     margin-right: auto;
   }
 
-  .hero-search {
+  .dashboard-container .hero-search {
     margin: auto;
     text-align: left;
   }
@@ -32,11 +32,11 @@
     justify-content: center;
   }
 
-  .hero-visual {
+  .dashboard-container .hero-visual {
     min-height: 390px;
   }
 
-  .stats {
+  .dashboard-container .stats {
     grid-template-columns: repeat(2, 1fr);
   }
 
@@ -67,30 +67,30 @@
     display: none;
   }
 
-  .hero {
+  .dashboard-container .hero {
     width: calc(100% - 24px);
     padding-top: 40px;
   }
 
-  .hero h1 {
+  .dashboard-container .hero h1 {
     font-size: 42px;
     letter-spacing: -2px;
   }
 
-  .hero-content > p {
+  .dashboard-container .hero-content > p {
     font-size: 15px;
   }
 
-  .hero-search {
+  .dashboard-container .hero-search {
     height: auto;
     min-height: 58px;
   }
 
-  .hero-search button {
+  .dashboard-container .hero-search button {
     padding: 0 15px;
   }
 
-  .hero-visual {
+  .dashboard-container .hero-visual {
     transform: scale(0.88);
     margin-top: -25px;
   }
@@ -103,14 +103,14 @@
     right: -5px;
   }
 
-  .stats {
+  .dashboard-container .stats {
     width: calc(100% - 24px);
     grid-template-columns: repeat(2, 1fr);
     padding: 24px 15px;
     margin-bottom: 55px;
   }
 
-  .stats strong {
+  .dashboard-container .stats strong {
     font-size: 18px;
   }
 
@@ -225,7 +225,7 @@
     background-attachment: fixed;
 }
 
-.hero {
+.dashboard-container .hero {
     position: relative;
     background: var(--surface-card);
     border: 1px solid var(--border);
@@ -235,7 +235,7 @@
     box-shadow: var(--card-shadow);
 }
 
-.hero::before {
+.dashboard-container .hero::before {
     display: none;
 }
 

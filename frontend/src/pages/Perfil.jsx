@@ -3,8 +3,21 @@ import "./Perfil.css";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 const API = "/api";
+// Retrato de muestra de Unsplash, bajo la licencia de Unsplash: https://unsplash.com/photos/a-striking-black-and-white-portrait-of-a-man-JnBFuqiW3SE
+const FOTO_PERFIL_DEFAULT = "/avatar-default-bw.jpg";
+const FOTO_PERFIL_DEFAULT_ANTERIOR =
+  "https://api.dicebear.com/7.x/avataaars/svg?seed=EspecialistaPro&backgroundColor=b6e3f4";
+
+const normalizarFotoPerfil = (foto) => {
+  const valor = String(foto || "").trim();
+  if (!valor || valor === FOTO_PERFIL_DEFAULT_ANTERIOR) {
+    return FOTO_PERFIL_DEFAULT;
+  }
+  return valor;
+};
 
 const AVATARES_PREDEFINIDOS = [
+  { label: "📷 Persona (blanco y negro)", url: FOTO_PERFIL_DEFAULT },
   { label: "⚡ Electricista", url: "https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Electricista&backgroundColor=0d9488" },
   { label: "🔧 Plomero", url: "https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Plomero&backgroundColor=2563eb" },
   { label: "🧱 Constructor", url: "https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Albanil&backgroundColor=d97706" },
@@ -44,7 +57,7 @@ function comprimirImagenBase64(file, maxDim = 480) {
 }
 
 const perfilInicial = {
-  fotoPerfil: "https://api.dicebear.com/7.x/avataaars/svg?seed=EspecialistaPro&backgroundColor=b6e3f4",
+  fotoPerfil: FOTO_PERFIL_DEFAULT,
   oficio: "Especialista en Servicios del Hogar, Instalaciones y Mantenimiento",
   descripcion:
     "Profesional matriculado con más de 8 años de experiencia en instalaciones eléctricas, plomería, pintura y reparaciones generales del hogar y comercios. Atención puntual, presupuestos sin cargo y garantía escrita en cada trabajo realizado.",
@@ -521,7 +534,7 @@ export default function Perfil() {
 
       if (data) {
         setPerfil({
-          fotoPerfil: data.fotoPerfil || perfilInicial.fotoPerfil,
+          fotoPerfil: normalizarFotoPerfil(data.fotoPerfil),
           oficio: data.oficio || perfilInicial.oficio,
           descripcion: data.descripcion || perfilInicial.descripcion,
           servicios: data.servicios || perfilInicial.servicios,
