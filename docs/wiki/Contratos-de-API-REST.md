@@ -90,14 +90,74 @@ Todas las respuestas del servidor se entregan bajo cabecera `Content-Type: appli
 ---
 
 ### 💬 Comentarios en Publicaciones
-* **Obtener Comentarios de un Aviso:** `GET /api/publicaciones/{id}/comentarios`
-* **Agregar Comentario:** `POST /api/publicaciones/{id}/comentarios`
+* **Obtener Comentarios de un Aviso:** `GET /api/comentarios/publicacion/{publicacionId}`
+* **Agregar Comentario:** `POST /api/comentarios`
 ```json
 {
+  "publicacionId": 1,
   "autor": "Esteban Rossi",
-  "texto": "Hola, te dejé un mensaje privado con mi disponibilidad para mañana."
+  "contenido": "Hola, ¿trabajan con cañerías de termofusión en Nueva Córdoba?"
 }
 ```
+
+---
+
+### 📄 Solicitudes Formales de Presupuesto
+* **Listar Solicitudes:** `GET /api/solicitudes`
+* **Consultar Solicitud por ID:** `GET /api/solicitudes/{id}`
+* **Crear Solicitud de Presupuesto:** `POST /api/solicitudes`
+```json
+{
+  "titulo": "Instalación de Bomba Presurizadora",
+  "descripcion": "Instalación en tanque de agua con cañería termofusión.",
+  "creadorUsuarioId": 1,
+  "profesionalUsuarioId": 2,
+  "presupuestoEstimado": 45000
+}
+```
+
+---
+
+### 💳 Pasarela de Pagos Mercado Pago (10% Comisión)
+* **Configuración Pública:** `GET /api/mercadopago/config`
+* **Crear Preferencia de Pago:** `POST /api/mercadopago/crear-preferencia`
+```json
+{
+  "concepto": "Seña Formal Mano de Obra",
+  "monto": 35000,
+  "email": "cliente@plataforma.com"
+}
+```
+* **Respuesta (`200 OK`):**
+```json
+{
+  "preferenceId": "PREF-c81729da",
+  "montoTotal": 35000.0,
+  "comisionPlataforma10": 3500.0,
+  "netoProfesional90": 31500.0,
+  "initPoint": "https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=PREF-c81729da"
+}
+```
+
+---
+
+### 🏢 Suscripciones Corporativas para Empresas
+* **Listar Empresas Suscriptas:** `GET /api/empresas`
+* **Registrar Empresa con Plan:** `POST /api/empresas`
+```json
+{
+  "nombre": "Constructora Central S.A.",
+  "cuit": "30-71234567-9",
+  "rubro": "Construcción y Obras Civiles",
+  "planSuscripcion": "CONSTRUCTORA"
+}
+```
+
+---
+
+### 🛡️ Perfiles y Validación de Matrícula (Trust & Safety)
+* **Consultar Perfil por Usuario:** `GET /api/perfiles/usuario/{usuarioId}`
+* **Actualizar Matrícula y Estado Verificado:** `PUT /api/perfiles/usuario/{usuarioId}`
 
 ---
 

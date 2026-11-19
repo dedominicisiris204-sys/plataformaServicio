@@ -71,6 +71,34 @@ La plataforma integra un conjunto de 8 características avanzadas diseñadas par
 
 ---
 
-### 8. 🔔 Notificaciones Push Flotantes (Toasts) y Modo Oscuro
-* **Alertas en Tiempo Real:** Banners flotantes en la esquina inferior derecha que notifican nuevos presupuestos recibidos, mensajes entrantes y avisos de guardias cercanas.
+### 8. 🔔 Centro de Notificaciones en Icono (Badge) y Modo Oscuro
+* **Insignia en Tiempo Real:** Contador numérico sobre el icono de campana `🔔` en la barra superior, en el menú lateral y en la barra inferior móvil que alerta sobre presupuestos recibidos y mensajes sin interrumpir la navegación.
 * **Modo Oscuro / Claro:** Cambio de tema instantáneo que reconfigura los fondos, contrastes de texto y bordes según las preferencias del usuario.
+
+---
+
+### 9. 💰 Mi Billetera Virtual y Cobros con Mercado Pago (10% Comisión)
+* **Monetización Ética:** Retención automática del 10% exclusivamente sobre la mano de obra; los materiales tienen 0% de comisión.
+* **Liquidación y Retiro a CBU/Alias:** Panel financiero para que el especialista consulte su saldo acumulado disponible ($135.000) y solicite la transferencia bancaria a su CBU, CVU o Alias.
+* **Seña Protegida:** Generación de preferencias de pago oficiales en Mercado Pago para resguardar el dinero del cliente hasta la finalización del trabajo.
+
+---
+
+### 10. 🏢 Suscripciones Mensuales para Empresas y Constructoras
+* **Planes Corporativos:**
+  * **Plan PyME & Comercio:** $12.000/mes para pequeños talleres y mantenimiento.
+  * **Plan Constructora & Obras:** $28.000/mes para obras civiles y refacciones integrales.
+  * **Plan Corporativo / Industria:** $55.000/mes con acceso prioritario y soporte dedicado.
+* **Gestión de Cuadrillas:** Herramienta para armar equipos de trabajo interdisciplinarios entre varios especialistas.
+
+---
+
+### 11. 💬 Chat Seguro con Escudo Antifraude
+* **Directorio de Especialistas:** Directorio filtrable por oficio (electricistas, plomeros, albañiles, pintores, etc.) con botón de contacto directo.
+* **Detección de Bypass:** Sistema inteligente que alerta cuando se intenta compartir teléfonos o correos externos, resguardando la garantía de la plataforma.
+
+---
+
+### 12. 📱 Experiencia Móvil Responsiva PWA (Pantalla Completa)
+* **Drawer Deslizante:** Menú lateral completo que se activa con el botón hamburguesa `☰` y se cierra con `✕` en celulares y tablets.
+* **Barra Inferior Táctil (Dock):** Accesos directos al alcance del pulgar para Inicio, Muro, Publicar (+), Chat y Menú.

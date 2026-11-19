@@ -15,5 +15,5 @@
 ### 📌 Información Académica
 * **Materia:** Gestión de Proyectos
 * **Carrera:** Tecnicatura en Desarrollo de Software
-* **Profesor:** Narcizo
+* **Profesor:** Prof. Yamil Alvarez
 * **Año:** 2026
